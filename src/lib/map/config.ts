@@ -33,6 +33,8 @@ export const MAP_SOURCES = {
   COMMUNITY_REPORTS: "georynth-reports-source",
   SEARCH_MARKER: "georynth-search-marker-source",
   USER_LOCATION: "georynth-user-location-source",
+  PARTICIPANTS: "georynth-participants-source",
+  VENUES: "georynth-venues-source",
 };
 
 export const MAP_LAYERS = {
@@ -43,4 +45,9 @@ export const MAP_LAYERS = {
   SEARCH_MARKER: "georynth-search-marker-layer",
   USER_LOCATION_PULSE: "georynth-user-location-pulse-layer",
   USER_LOCATION_DOT: "georynth-user-location-dot-layer",
+  PARTICIPANTS_PULSE: "georynth-participants-pulse-layer",
+  PARTICIPANTS_DOTS: "georynth-participants-dots-layer",
+  PARTICIPANTS_LABELS: "georynth-participants-labels-layer",
+  VENUES_CIRCLES: "georynth-venues-circles-layer",
+  VENUES_LABELS: "georynth-venues-labels-layer",
 };

@@ -60,7 +60,14 @@ export type SavedPlace = {
   createdAt: string;
 };
 
-export type ActiveMode = "explore" | "directions" | "network" | "reports" | "saved" | "account";
+export type ActiveMode = 
+  | "plan" 
+  | "my_meetups" 
+  | "explore" 
+  | "saved" 
+  | "settings"
+  | "join"
+  | "active_meetup";
 
 export type ProviderStatus = {
   maptilerConfigured: boolean;

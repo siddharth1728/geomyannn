@@ -10,6 +10,10 @@ import {
   PlaceResult 
 } from "@/types/geo";
 import { 
+  ParticipantLocation, 
+  CandidateVenue 
+} from "@/types/meetup";
+import { 
   HYDERABAD_CENTER, 
   DEFAULT_ZOOM, 
   getMapStyleUrl, 
@@ -23,9 +27,13 @@ interface MapContainerProps {
   onViewportChange: (viewport: { center: Coordinates; zoom: number; pitch: number; bearing: number }) => void;
   onMapClick?: (coords: Coordinates) => void;
   onSelectReport?: (report: CommunityReport) => void;
+  onSelectVenue?: (venue: CandidateVenue) => void;
   selectedPlace?: PlaceResult | null;
   activeRoute?: RouteResult | null;
+  multiRoutes?: RouteResult[];
   communityReports?: CommunityReport[];
+  participantLocations?: ParticipantLocation[];
+  candidateVenues?: CandidateVenue[];
   networkMode: boolean;
   userLocation?: Coordinates | null;
   onMapReady?: (map: maplibregl.Map) => void;
@@ -36,9 +44,13 @@ export function MapContainer({
   onViewportChange,
   onMapClick,
   onSelectReport,
+  onSelectVenue,
   selectedPlace,
   activeRoute,
+  multiRoutes = [],
   communityReports = [],
+  participantLocations = [],
+  candidateVenues = [],
   networkMode,
   userLocation,
   onMapReady,
@@ -48,16 +60,15 @@ export function MapContainer({
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [styleLoaded, setStyleLoaded] = useState(false);
 
-  // Helper to attach all interactive sources and layers
+  // Setup interactive layers
   const setupLayers = useCallback((map: maplibregl.Map) => {
-    // A) Route Source
+    // 1. Route Source & Layers
     if (!map.getSource(MAP_SOURCES.ROUTE)) {
       map.addSource(MAP_SOURCES.ROUTE, {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
       });
 
-      // Outer glow casing
       map.addLayer({
         id: MAP_LAYERS.ROUTE_CASING,
         type: "line",
@@ -71,7 +82,6 @@ export function MapContainer({
         },
       });
 
-      // Core route line (Google navigation blue / vibrant cyan)
       map.addLayer({
         id: MAP_LAYERS.ROUTE_LINE,
         type: "line",
@@ -85,7 +95,58 @@ export function MapContainer({
       });
     }
 
-    // B) Community Reports Source
+    // 2. Participant Locations Source & Layer (Green/Teal Pins)
+    if (!map.getSource(MAP_SOURCES.PARTICIPANTS)) {
+      map.addSource(MAP_SOURCES.PARTICIPANTS, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+
+      map.addLayer({
+        id: MAP_LAYERS.PARTICIPANTS_PULSE,
+        type: "circle",
+        source: MAP_SOURCES.PARTICIPANTS,
+        paint: {
+          "circle-radius": 15,
+          "circle-color": "#10B981",
+          "circle-opacity": 0.25,
+        },
+      });
+
+      map.addLayer({
+        id: MAP_LAYERS.PARTICIPANTS_DOTS,
+        type: "circle",
+        source: MAP_SOURCES.PARTICIPANTS,
+        paint: {
+          "circle-radius": 8,
+          "circle-color": "#059669",
+          "circle-stroke-width": 2.5,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+    }
+
+    // 3. Candidate Venues Source & Layer (Orange/Purple Stars)
+    if (!map.getSource(MAP_SOURCES.VENUES)) {
+      map.addSource(MAP_SOURCES.VENUES, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+
+      map.addLayer({
+        id: MAP_LAYERS.VENUES_CIRCLES,
+        type: "circle",
+        source: MAP_SOURCES.VENUES,
+        paint: {
+          "circle-radius": 10,
+          "circle-color": "#7C3AED",
+          "circle-stroke-width": 3,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+    }
+
+    // 4. Community Reports Source & Layer
     if (!map.getSource(MAP_SOURCES.COMMUNITY_REPORTS)) {
       map.addSource(MAP_SOURCES.COMMUNITY_REPORTS, {
         type: "geojson",
@@ -97,7 +158,7 @@ export function MapContainer({
         type: "circle",
         source: MAP_SOURCES.COMMUNITY_REPORTS,
         paint: {
-          "circle-radius": 8,
+          "circle-radius": 7,
           "circle-color": [
             "match",
             ["get", "status"],
@@ -105,13 +166,13 @@ export function MapContainer({
             "resolved", "#10B981",
             "#F59E0B",
           ],
-          "circle-stroke-width": 2.5,
+          "circle-stroke-width": 2,
           "circle-stroke-color": "#ffffff",
         },
       });
     }
 
-    // C) Search Selection Marker Source
+    // 5. Search Selection Marker Source
     if (!map.getSource(MAP_SOURCES.SEARCH_MARKER)) {
       map.addSource(MAP_SOURCES.SEARCH_MARKER, {
         type: "geojson",
@@ -124,14 +185,14 @@ export function MapContainer({
         source: MAP_SOURCES.SEARCH_MARKER,
         paint: {
           "circle-radius": 9,
-          "circle-color": "#EA4335", // Google red location pin
+          "circle-color": "#EA4335",
           "circle-stroke-width": 3,
           "circle-stroke-color": "#ffffff",
         },
       });
     }
 
-    // D) User Location Source
+    // 6. User Location Source
     if (!map.getSource(MAP_SOURCES.USER_LOCATION)) {
       map.addSource(MAP_SOURCES.USER_LOCATION, {
         type: "geojson",
@@ -163,7 +224,7 @@ export function MapContainer({
     }
   }, []);
 
-  // 1. Initialize MapLibre instance
+  // Initialize Map
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
@@ -181,10 +242,8 @@ export function MapContainer({
 
     mapRef.current = map;
 
-    // Safety fallback: if style fails to load, gracefully switch to open Google-style Liberty tiles
     map.on("error", (e) => {
       if (e?.error?.status === 403 || (e?.error?.message && e.error.message.includes("403"))) {
-        console.warn("MapTiler key unauthorized, falling back to open Google-style Liberty vector tiles.");
         map.setStyle("https://tiles.openfreemap.org/styles/liberty");
       }
     });
@@ -203,7 +262,6 @@ export function MapContainer({
       map.resize();
     });
 
-    // Viewport telemetry updates
     const updateViewport = () => {
       const c = map.getCenter();
       onViewportChange({
@@ -219,20 +277,33 @@ export function MapContainer({
     map.on("pitch", updateViewport);
     map.on("rotate", updateViewport);
 
-    // Map click handler
+    // Click handler for candidate venues & community reports
     map.on("click", (e) => {
-      const features = map.queryRenderedFeatures(e.point, {
+      // Check candidate venues first
+      const venueFeatures = map.queryRenderedFeatures(e.point, {
+        layers: [MAP_LAYERS.VENUES_CIRCLES],
+      });
+
+      if (venueFeatures.length > 0 && onSelectVenue) {
+        const vId = (venueFeatures[0].properties as any)?.venueId;
+        const matched = candidateVenues.find((v) => v.venueId === vId);
+        if (matched) {
+          onSelectVenue(matched);
+          return;
+        }
+      }
+
+      // Check community reports
+      const reportFeatures = map.queryRenderedFeatures(e.point, {
         layers: [MAP_LAYERS.REPORTS_CIRCLES],
       });
 
-      if (features.length > 0 && onSelectReport) {
-        const featureProps = features[0].properties as any;
-        if (featureProps && featureProps.id) {
-          const report = communityReports.find((r) => r.id === featureProps.id);
-          if (report) {
-            onSelectReport(report);
-            return;
-          }
+      if (reportFeatures.length > 0 && onSelectReport) {
+        const rId = (reportFeatures[0].properties as any)?.id;
+        const matched = communityReports.find((r) => r.id === rId);
+        if (matched) {
+          onSelectReport(matched);
+          return;
         }
       }
 
@@ -241,14 +312,13 @@ export function MapContainer({
       }
     });
 
-    map.on("mouseenter", MAP_LAYERS.REPORTS_CIRCLES, () => {
+    map.on("mouseenter", MAP_LAYERS.VENUES_CIRCLES, () => {
       map.getCanvas().style.cursor = "pointer";
     });
-    map.on("mouseleave", MAP_LAYERS.REPORTS_CIRCLES, () => {
+    map.on("mouseleave", MAP_LAYERS.VENUES_CIRCLES, () => {
       map.getCanvas().style.cursor = "";
     });
 
-    // Immediate and delayed resize triggers to guarantee canvas dimension calibration
     const resizeTimer = setTimeout(() => {
       map.resize();
     }, 150);
@@ -268,17 +338,16 @@ export function MapContainer({
     };
   }, []);
 
-  // 2. Handle map style switching (Streets, Hybrid, Dark)
+  // Update Style
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-
     const { url } = getMapStyleUrl(mapStyleType);
     setStyleLoaded(false);
     map.setStyle(url);
   }, [mapStyleType]);
 
-  // 3. Synchronize Active Route Layer
+  // Synchronize Active & Multi Routes
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !styleLoaded) return;
@@ -286,61 +355,100 @@ export function MapContainer({
     const source = map.getSource(MAP_SOURCES.ROUTE) as maplibregl.GeoJSONSource | undefined;
     if (!source) return;
 
-    if (activeRoute && activeRoute.geometry) {
+    const allRoutes: RouteResult[] = [];
+    if (activeRoute) allRoutes.push(activeRoute);
+    if (multiRoutes.length > 0) allRoutes.push(...multiRoutes);
+
+    if (allRoutes.length > 0) {
+      const features = allRoutes.map((r, i) => ({
+        type: "Feature" as const,
+        geometry: r.geometry,
+        properties: {
+          index: i,
+          distance: r.distanceMeters,
+          duration: r.durationMilliseconds,
+        },
+      }));
+
       source.setData({
         type: "FeatureCollection",
-        features: [
-          {
-            type: "Feature",
-            geometry: activeRoute.geometry,
-            properties: {
-              distance: activeRoute.distanceMeters,
-              duration: activeRoute.durationMilliseconds,
-            },
-          },
-        ],
+        features,
       });
 
-      const coords = activeRoute.geometry.coordinates;
-      if (coords.length > 1) {
-        const bounds = coords.reduce(
+      // Fit bounds to cover all routes
+      const allCoords = allRoutes.flatMap((r) => r.geometry.coordinates);
+      if (allCoords.length > 1) {
+        const bounds = allCoords.reduce(
           (b, coord) => b.extend(coord as [number, number]),
-          new maplibregl.LngLatBounds(coords[0], coords[0])
+          new maplibregl.LngLatBounds(allCoords[0], allCoords[0])
         );
         map.fitBounds(bounds, { padding: 90, maxZoom: 15, duration: 1200 });
       }
     } else {
       source.setData({ type: "FeatureCollection", features: [] });
     }
-  }, [activeRoute, styleLoaded]);
+  }, [activeRoute, multiRoutes, styleLoaded]);
 
-  // 4. Synchronize Community Reports Markers
+  // Synchronize Participant Locations
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !styleLoaded) return;
 
-    const source = map.getSource(MAP_SOURCES.COMMUNITY_REPORTS) as maplibregl.GeoJSONSource | undefined;
+    const source = map.getSource(MAP_SOURCES.PARTICIPANTS) as maplibregl.GeoJSONSource | undefined;
     if (!source) return;
 
     source.setData({
       type: "FeatureCollection",
-      features: communityReports.map((r) => ({
+      features: participantLocations.map((p) => ({
         type: "Feature",
         geometry: {
           type: "Point",
-          coordinates: [r.longitude, r.latitude],
+          coordinates: [p.longitude, p.latitude],
         },
         properties: {
-          id: r.id,
-          category: r.category,
-          description: r.description,
-          status: r.status,
+          memberId: p.memberId,
+          name: p.memberName,
+          label: p.label,
         },
       })),
     });
-  }, [communityReports, styleLoaded]);
 
-  // 5. Synchronize Selected Place Marker & FlyTo
+    if (participantLocations.length > 1 && multiRoutes.length === 0) {
+      const bounds = participantLocations.reduce(
+        (b, p) => b.extend([p.longitude, p.latitude]),
+        new maplibregl.LngLatBounds([participantLocations[0].longitude, participantLocations[0].latitude], [participantLocations[0].longitude, participantLocations[0].latitude])
+      );
+      map.fitBounds(bounds, { padding: 90, maxZoom: 14, duration: 1000 });
+    }
+  }, [participantLocations, styleLoaded, multiRoutes]);
+
+  // Synchronize Candidate Venues
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !styleLoaded) return;
+
+    const source = map.getSource(MAP_SOURCES.VENUES) as maplibregl.GeoJSONSource | undefined;
+    if (!source) return;
+
+    source.setData({
+      type: "FeatureCollection",
+      features: candidateVenues.map((v) => ({
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [v.longitude, v.latitude],
+        },
+        properties: {
+          venueId: v.venueId,
+          name: v.name,
+          category: v.category,
+          avgDurationSec: v.avgDurationSec,
+        },
+      })),
+    });
+  }, [candidateVenues, styleLoaded]);
+
+  // Synchronize Selected Place Marker & FlyTo
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !styleLoaded) return;
@@ -358,9 +466,7 @@ export function MapContainer({
               type: "Point",
               coordinates: [selectedPlace.longitude, selectedPlace.latitude],
             },
-            properties: {
-              name: selectedPlace.name,
-            },
+            properties: { name: selectedPlace.name },
           },
         ],
       });
@@ -369,14 +475,13 @@ export function MapContainer({
         center: [selectedPlace.longitude, selectedPlace.latitude],
         zoom: 14.5,
         speed: 1.3,
-        essential: true,
       });
     } else {
       source.setData({ type: "FeatureCollection", features: [] });
     }
   }, [selectedPlace, styleLoaded]);
 
-  // 6. Synchronize User Location Pulse Dot
+  // Synchronize User Location Pulse Dot
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !styleLoaded) return;
@@ -409,11 +514,10 @@ export function MapContainer({
     }
   }, [userLocation, styleLoaded]);
 
-  // 7. Synchronize Road-Network Intelligence Mode
+  // Road Network Intelligence Mode
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !styleLoaded) return;
-
     toggleRoadNetworkMode(map, networkMode);
   }, [networkMode, styleLoaded]);
 
