@@ -18,11 +18,11 @@ export function MyMeetupsList({
   onClose,
 }: MyMeetupsListProps) {
   return (
-    <div className="w-full max-w-sm bg-surface/95 backdrop-blur-md border border-border rounded-xl shadow-panel-glow p-4 flex flex-col gap-3 max-h-[80vh] overflow-y-auto">
+    <div className="w-full max-w-sm bg-surface border border-border rounded-2xl shadow-card p-4 flex flex-col gap-3 max-h-[80vh] overflow-y-auto animate-in fade-in transition-colors">
       <div className="flex items-center justify-between border-b border-border pb-2.5">
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-accent-secondary" />
-          <span className="text-xs font-bold uppercase tracking-wider text-text-primary font-mono">
+          <Users className="w-4 h-4 text-primary" />
+          <span className="text-xs font-bold uppercase tracking-wider text-text-primary">
             My Meetups ({meetups.length})
           </span>
         </div>
@@ -36,7 +36,7 @@ export function MyMeetupsList({
 
       <button
         onClick={onPlanNew}
-        className="w-full py-2 rounded-lg bg-accent-secondary/15 hover:bg-accent-secondary/25 border border-accent-secondary/40 text-accent-secondary text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+        className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-subtle transition-all flex items-center justify-center gap-1.5"
       >
         <Plus className="w-3.5 h-3.5" />
         Plan New Meetup
@@ -48,22 +48,22 @@ export function MyMeetupsList({
             <div
               key={m.id}
               onClick={() => onSelectMeetup(m)}
-              className="p-3 rounded-xl bg-surface-elevated/70 border border-border hover:border-accent-secondary/50 cursor-pointer transition-all flex flex-col gap-1.5 group"
+              className="p-3.5 rounded-xl bg-surface-secondary hover:bg-surface border border-border hover:border-primary/40 cursor-pointer transition-all flex flex-col gap-1.5 group shadow-subtle"
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="text-xs font-bold text-text-primary group-hover:text-accent-secondary transition-colors truncate">
+                <div className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors truncate">
                   {m.title}
                 </div>
-                <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono uppercase font-bold border ${
+                <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${
                   m.status === "confirmed"
-                    ? "bg-accent-primary/15 text-accent-primary border-accent-primary/30"
-                    : "bg-warning/15 text-warning border-warning/30"
+                    ? "bg-success/15 text-success"
+                    : "bg-primary-soft text-primary"
                 }`}>
                   {m.status}
                 </span>
               </div>
 
-              <div className="text-[11px] text-text-muted flex items-center gap-2 font-mono">
+              <div className="text-[11px] text-text-muted flex items-center gap-2">
                 <span className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
                   {new Date(m.plannedAt).toLocaleDateString()}
@@ -71,9 +71,9 @@ export function MyMeetupsList({
                 <span>• {m.locations.length} participants</span>
               </div>
 
-              <div className="flex items-center justify-between text-[10px] text-text-muted font-mono pt-1 border-t border-border/50">
-                <span>Code: {m.inviteCode}</span>
-                <span className="text-accent-secondary flex items-center gap-0.5">
+              <div className="flex items-center justify-between text-[11px] text-text-muted pt-2 border-t border-border/60">
+                <span className="font-mono font-bold text-primary">Code: {m.inviteCode}</span>
+                <span className="text-primary font-medium flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
                   Open Room <ArrowRight className="w-3 h-3" />
                 </span>
               </div>
@@ -81,8 +81,9 @@ export function MyMeetupsList({
           ))}
         </div>
       ) : (
-        <div className="py-8 text-center text-xs text-text-muted">
-          No meetups organized yet. Tap &apos;Plan New Meetup&apos; to get started!
+        <div className="py-8 text-center text-xs text-text-muted space-y-1">
+          <p className="font-semibold text-text-primary">No meetups yet</p>
+          <p>Tap &apos;Plan New Meetup&apos; to find a spot everyone can reach.</p>
         </div>
       )}
     </div>

@@ -2,8 +2,9 @@
 ### "Find a place everyone can reach. Less planning. More meeting."
 
 **Product Category:** Social coordination, intelligent local discovery, and group mobility.  
-**Platforms:** Web (Next.js 15), iOS & Android (Expo SDK 52 / React Native).  
-**Visual Direction:** Geospatial Mission Control with effortless consumer UX.
+**Platform:** Modern Web Application (Next.js 15, React 19, responsive desktop/tablet/mobile browsers).  
+**Visual Direction:** Sophisticated adaptive consumer experience with vector map canvas.  
+**Themes:** Adaptive Light (default), Dark, and System-aware.
 
 ---
 
@@ -35,30 +36,37 @@ The application includes an end-to-end verified scenario across Hyderabad, India
 
 | Layer | Technologies |
 | :--- | :--- |
-| **Web Client** | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Lucide Icons |
-| **Mobile Client** | Expo SDK 52, React Native, Expo Router v4, `@maplibre/maplibre-react-native` |
+| **Web Frontend** | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Lucide Icons |
 | **Vector Map Engine** | MapLibre GL JS v5, MapTiler Cloud (`streets-v2`, `hybrid`, `streets-v2-dark`) |
 | **Routing & Matrix** | GraphHopper Directions & Matrix APIs (Car, Bike, Foot) |
 | **Database & Auth** | Supabase Cloud (PostgreSQL, Row Level Security, Realtime) |
-| **Shared Domain** | `@georynth/domain` (Fairness algorithms, validation, shared types) |
+| **Domain Logic** | Shared fairness algorithms, validation, ranking metrics |
 | **Testing** | Vitest (Automated unit tests for matrix math, fairness ranking, and formatters) |
 
 ---
 
-## 📱 Multi-Platform Architecture
+## 💻 Project Architecture
 
 ```
 GEOMYANNN/
-├── apps/
-│   └── mobile/              # Expo React Native App (iOS & Android)
-│       ├── app/             # Expo Router screens (Tabs, Meetup Cockpit, Modals)
-│       ├── components/      # NativeMap, VenueCard, RankingModeSelector
-│       └── lib/             # Mobile API, Supabase, and Location utilities
 ├── packages/
-│   └── domain/              # Shared business logic & types (@georynth/domain)
-├── src/                     # Next.js Web App
-│   ├── app/api/             # Server-side API Route Handlers
-│   └── components/          # Web UI & MapLibre components
+│   └── domain/              # Pure domain logic & tests (fairness ranking, matrix math)
+├── src/
+│   ├── app/                 # Next.js App Router & API routes
+│   │   ├── api/             # Matrix, Meetups, Places, Routes endpoints
+│   │   ├── globals.css      # Adaptive light/dark design tokens
+│   │   ├── layout.tsx       # Theme provider & root layout
+│   │   └── page.tsx         # Unified Meetup & Map experience
+│   ├── components/          # Polished UI components
+│   │   ├── auth/            # Profile & App Settings modal
+│   │   ├── layout/          # AppHeader, MobileTabBar, ThemeToggle
+│   │   ├── map/             # MapContainer (MapLibre), MapControls, StyleSwitcher
+│   │   ├── meetup/          # HeroWelcomeCard, MeetupWorkspace, PlanMeetupModal, JoinMeetupModal
+│   │   ├── saved/           # SavedPlacesPanel
+│   │   └── search/          # GlobalSearch autocomplete
+│   ├── hooks/               # useTheme hook (System, Light, Dark)
+│   ├── lib/                 # MapTiler, GraphHopper, Supabase, Geocoding providers
+│   └── types/               # Type definitions for Meetups, Geo, Routes
 └── supabase/
     └── migrations/          # PostgreSQL migrations with RLS policies
 ```

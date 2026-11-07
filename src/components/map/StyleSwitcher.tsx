@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Layers, Map as MapIcon, Globe, Moon } from "lucide-react";
+import { Map as MapIcon, Globe, Moon } from "lucide-react";
 import { MapStyleType } from "@/lib/map/config";
 
 interface StyleSwitcherProps {
@@ -10,29 +10,26 @@ interface StyleSwitcherProps {
 }
 
 export function StyleSwitcher({ currentStyle, onSelectStyle }: StyleSwitcherProps) {
-  const styles: { id: MapStyleType; label: string; icon: any; preview: string }[] = [
+  const styles: { id: MapStyleType; label: string; icon: any }[] = [
     {
       id: "streets",
-      label: "Google Streets",
+      label: "Street Map",
       icon: MapIcon,
-      preview: "bg-[#e8ece9] text-[#1a73e8]",
     },
     {
       id: "hybrid",
       label: "Satellite",
       icon: Globe,
-      preview: "bg-[#0b1d28] text-white",
     },
     {
       id: "dark",
-      label: "Mission Dark",
+      label: "Night Map",
       icon: Moon,
-      preview: "bg-[#101821] text-[#75E6C2]",
     },
   ];
 
   return (
-    <div className="flex items-center gap-1.5 p-1 bg-surface/95 backdrop-blur-md border border-border rounded-xl shadow-panel-glow z-20">
+    <div className="flex items-center gap-1 p-1 bg-surface/95 backdrop-blur-md border border-border rounded-xl shadow-card z-20">
       {styles.map((item) => {
         const Icon = item.icon;
         const isSelected = currentStyle === item.id;
@@ -42,13 +39,13 @@ export function StyleSwitcher({ currentStyle, onSelectStyle }: StyleSwitcherProp
             onClick={() => onSelectStyle(item.id)}
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
               isSelected
-                ? "bg-surface-elevated text-text-primary border border-accent-secondary/50 shadow-sm font-semibold"
-                : "text-text-muted hover:text-text-primary hover:bg-surface-elevated/50 border border-transparent"
+                ? "bg-primary-soft text-primary font-bold shadow-subtle border border-primary/20"
+                : "text-text-muted hover:text-text-primary hover:bg-surface-secondary border border-transparent"
             }`}
             title={`Switch to ${item.label}`}
           >
-            <Icon className={`w-3.5 h-3.5 ${isSelected ? "text-accent-secondary" : ""}`} />
-            <span>{item.label}</span>
+            <Icon className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{item.label}</span>
           </button>
         );
       })}

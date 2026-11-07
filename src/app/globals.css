@@ -2,26 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Adaptive Light Theme (Default Consumer Experience) */
 :root {
-  --background: #080D13;
-  --surface: #101821;
-  --surface-elevated: #17222D;
-  --surface-muted: #1B2833;
+  --background: #F7F9F8;
+  --surface: #FFFFFF;
+  --surface-secondary: #F0F4F2;
+  --surface-elevated: #FFFFFF;
 
-  --text-primary: #F2F6F8;
-  --text-secondary: #A0AFBA;
-  --text-muted: #6E7F8B;
+  --text-primary: #17211F;
+  --text-secondary: #62716C;
+  --text-muted: #8A9792;
 
-  --accent-primary: #75E6C2;
-  --accent-secondary: #71B9E8;
+  --primary: #168B6D;
+  --primary-hover: #117458;
+  --primary-soft: #E3F5EE;
 
-  --warning: #E8B86B;
-  --danger: #EF777D;
+  --secondary: #628CCB;
 
-  --border: rgba(178, 205, 220, 0.13);
+  --success: #188B61;
+  --warning: #B67D29;
+  --danger: #CE5962;
+
+  --border: #E3EAE6;
+  --border-subtle: #EEF3F0;
+
+  /* Backward compatibility aliases */
+  --accent-primary: #168B6D;
+  --accent-secondary: #628CCB;
+  --surface-muted: #F0F4F2;
 
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Adaptive Dark Theme */
+[data-theme="dark"] {
+  --background: #0D1318;
+  --surface: #141D24;
+  --surface-secondary: #1C2730;
+  --surface-elevated: #202D36;
+
+  --text-primary: #F2F6F7;
+  --text-secondary: #A5B4BC;
+  --text-muted: #758792;
+
+  --primary: #65D7AE;
+  --primary-hover: #83E4C3;
+  --primary-soft: #18392F;
+
+  --secondary: #83B6E8;
+
+  --success: #65CBA3;
+  --warning: #E7B86B;
+  --danger: #ED858B;
+
+  --border: #2A3840;
+  --border-subtle: #1F2A32;
+
+  /* Backward compatibility aliases */
+  --accent-primary: #65D7AE;
+  --accent-secondary: #83B6E8;
+  --surface-muted: #1C2730;
 }
 
 body {
@@ -31,28 +72,34 @@ body {
   overflow: hidden;
   height: 100vh;
   width: 100vw;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Custom scrollbar for mission panels */
+/* Tabular numbers for travel times and distances */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom smooth scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--surface);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--surface-muted);
-  border-radius: 4px;
+  background: var(--border);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-primary);
+  background: var(--text-muted);
 }
 
-/* MapLibre canvas full reset */
+/* MapLibre full canvas */
 .maplibregl-canvas-container,
 .maplibregl-canvas {
   outline: none;

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ThemeProvider } from "@/hooks/useTheme";
 
 export const metadata: Metadata = {
-  title: "GEORYNTH — Geospatial Mission Control",
-  description: "Global Geographical Intelligence & Mobility Platform. The world, connected.",
+  title: "GEORYNTH — Find a place everyone can reach",
+  description: "Less planning. More meeting. Intelligent group meetup and social place discovery platform.",
   icons: {
     icon: "/favicon.ico",
   },
@@ -15,8 +16,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className="antialiased select-none">{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased">
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

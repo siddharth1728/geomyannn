@@ -18,7 +18,12 @@ import {
   Loader2, 
   Zap,
   Star,
-  Info
+  Info,
+  X,
+  ExternalLink,
+  Calendar,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { 
   Meetup, 
@@ -49,6 +54,7 @@ export function MeetupWorkspace({
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [expandedTimesVenueId, setExpandedTimesVenueId] = useState<string | null>(null);
 
   // New participant input state
   const [isAddingMember, setIsAddingMember] = useState(false);
@@ -101,8 +107,13 @@ export function MeetupWorkspace({
     }
   };
 
-  // Run Matrix calculation with selected ranking mode
+  // Run Matrix calculation
   const handleCalculateMatrix = async (mode: RankingMode = rankingMode) => {
+    if (meetup.locations.length === 0) {
+      setError("Please add at least one participant location before calculating travel times.");
+      return;
+    }
+
     setCalculating(true);
     setError(null);
 
@@ -110,41 +121,44 @@ export function MeetupWorkspace({
       const res = await fetch(`/api/meetups/${meetup.id}/matrix`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rankingMode: mode }),
+        body: JSON.stringify({ mode }),
       });
 
-      const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Failed to compute group travel times");
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || "Matrix calculation failed");
       }
 
-      const updatedRes = await fetch(`/api/meetups/${meetup.id}`);
-      const updatedData = await updatedRes.json();
-      if (updatedData.meetup) {
-        onUpdateMeetup(updatedData.meetup);
-      }
+      const data = await res.json();
+      onUpdateMeetup({
+        ...meetup,
+        venues: data.venues || [],
+        status: "voting",
+      });
     } catch (err: any) {
-      setError(err.message || "Matrix calculation error");
+      setError(err.message || "Failed to calculate matrix");
     } finally {
       setCalculating(false);
     }
   };
 
   // Cast vote
-  const handleVote = async (venueId: string, memberId: string = currentMemberId) => {
+  const handleVote = async (venueId: string) => {
     try {
       const res = await fetch(`/api/meetups/${meetup.id}/votes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberId, venueId }),
+        body: JSON.stringify({ memberId: currentMemberId, venueId }),
       });
 
-      const data = await res.json();
-      if (data.meetup) {
-        onUpdateMeetup(data.meetup);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.meetup) {
+          onUpdateMeetup(data.meetup);
+        }
       }
     } catch (err: any) {
-      setError(err.message || "Failed to submit vote");
+      setError(err.message || "Failed to record vote");
     }
   };
 
@@ -160,210 +174,226 @@ export function MeetupWorkspace({
         body: JSON.stringify({ venueId }),
       });
 
-      const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Failed to confirm venue");
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || "Failed to confirm venue");
       }
 
+      const data = await res.json();
       if (data.meetup) {
         onUpdateMeetup(data.meetup);
       }
 
       if (data.directions && onDisplayDirections) {
-        const validRoutes: RouteResult[] = data.directions
+        const routes: RouteResult[] = data.directions
           .map((d: any) => d.route)
           .filter(Boolean);
-        onDisplayDirections(validRoutes);
+        onDisplayDirections(routes);
       }
     } catch (err: any) {
-      setError(err.message || "Failed to confirm venue");
+      setError(err.message || "Failed to confirm meetup");
     } finally {
       setConfirming(false);
     }
   };
 
-  const confirmedVenue = meetup.venues.find((v) => v.venueId === meetup.confirmedVenueId);
+  const confirmedVenue = meetup.venues.find(
+    (v) => v.venueId === meetup.confirmedVenueId || v.id === meetup.confirmedVenueId
+  );
 
   return (
-    <div className="w-full max-w-xl bg-surface/95 backdrop-blur-md border border-border rounded-2xl shadow-panel-glow p-4 flex flex-col gap-4 max-h-[85vh] overflow-y-auto">
-      {/* 1. Header & Quick Invite */}
-      <div className="flex flex-col gap-2 border-b border-border pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-accent-secondary/15 text-accent-secondary border border-accent-secondary/30">
-                {meetup.category}
-              </span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${
-                meetup.status === "confirmed"
-                  ? "bg-accent-primary/15 text-accent-primary border-accent-primary/40"
-                  : "bg-warning/15 text-warning border-warning/40"
-              }`}>
-                {meetup.status}
-              </span>
-            </div>
-            <h1 className="text-base font-bold text-text-primary mt-1">
+    <div className="w-full max-w-md bg-surface border border-border rounded-2xl shadow-card overflow-hidden flex flex-col max-h-[calc(100vh-140px)] animate-in fade-in transition-colors">
+      {/* Header Bar */}
+      <div className="p-4 border-b border-border bg-surface-secondary/40 flex items-center justify-between">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-primary-soft text-primary flex items-center justify-center font-bold shrink-0">
+            👥
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-text-primary truncate">
               {meetup.title}
-            </h1>
-            <div className="text-xs text-text-muted flex items-center gap-2 mt-0.5 font-mono">
-              <Clock className="w-3.5 h-3.5 text-text-muted" />
-              <span>{new Date(meetup.plannedAt).toLocaleDateString()} {new Date(meetup.plannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              <span>• Hosted by {meetup.creatorName}</span>
+            </h2>
+            <div className="flex items-center gap-2 text-[11px] text-text-muted">
+              <span>{meetup.members.length} friends</span>
+              <span>•</span>
+              <span className="capitalize">{meetup.category}</span>
             </div>
           </div>
-
-          <button
-            onClick={onClose}
-            className="text-text-muted hover:text-text-primary p-1 rounded-md"
-          >
-            ✕
-          </button>
         </div>
 
-        {/* Share Invite Code Box */}
-        <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-elevated border border-border">
-          <div className="flex items-center gap-2">
-            <Share2 className="w-4 h-4 text-accent-secondary" />
-            <span className="text-xs text-text-secondary">Invitation Code:</span>
-            <span className="text-xs font-mono font-bold tracking-wider text-accent-secondary bg-surface px-2 py-0.5 rounded border border-border">
-              {meetup.inviteCode}
-            </span>
-          </div>
-
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Invite Code Pill */}
           <button
             onClick={handleCopyInvite}
-            className="px-2.5 py-1 rounded bg-surface border border-border text-xs text-text-secondary hover:text-accent-secondary flex items-center gap-1 transition-colors"
+            title="Click to copy invite code"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface border border-border hover:border-primary text-xs font-mono font-bold text-primary transition-all active:scale-95"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-accent-primary" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? "Copied" : "Share"}</span>
+            {copied ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
+            <span>{meetup.inviteCode}</span>
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-secondary transition-colors"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* 2. Group Participant Starting Locations */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-text-secondary">
-            <Users className="w-4 h-4 text-accent-primary" />
-            <span>Group Members ({meetup.locations.length})</span>
+      {/* Scrollable Content */}
+      <div className="p-4 overflow-y-auto space-y-4 flex-1">
+        {error && (
+          <div className="p-3 rounded-xl bg-danger/10 border border-danger/20 text-danger text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* 1. CONFIRMED CELEBRATION CARD */}
+        {meetup.status === "confirmed" && confirmedVenue && (
+          <div className="p-4 rounded-xl bg-success/10 border border-success/30 text-text-primary space-y-3">
+            <div className="flex items-center gap-2 text-success font-bold text-xs uppercase tracking-wider">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Official Meeting Destination Confirmed!</span>
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-text-primary">
+                {confirmedVenue.name}
+              </h3>
+              <p className="text-xs text-text-secondary mt-0.5">
+                {confirmedVenue.address}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-1 text-xs text-text-muted">
+              <Clock className="w-3.5 h-3.5 text-primary" />
+              <span>Average travel time: ~{Math.round(confirmedVenue.avgDurationSec / 60)} min</span>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${confirmedVenue.latitude},${confirmedVenue.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-2 px-3 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold text-center flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <span>Navigate in Google Maps</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* 2. PARTICIPANT ROSTER */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">
+              Participants ({meetup.locations.length})
+            </span>
+            <button
+              onClick={() => setIsAddingMember(!isAddingMember)}
+              className="text-xs font-semibold text-primary hover:text-primary-hover flex items-center gap-1"
+            >
+              <Plus className="w-3 h-3" />
+              <span>Add Starting Point</span>
+            </button>
           </div>
 
-          <button
-            onClick={() => setIsAddingMember(!isAddingMember)}
-            className="text-[11px] text-accent-secondary hover:underline flex items-center gap-1 font-semibold"
-          >
-            <Plus className="w-3 h-3" />
-            Add Member
-          </button>
-        </div>
-
-        {/* Participant list pills */}
-        <div className="grid grid-cols-2 gap-2">
-          {meetup.locations.map((loc) => (
-            <div
-              key={loc.memberId}
-              className="p-2 rounded-xl bg-surface-elevated/70 border border-border flex items-center gap-2 min-w-0"
-            >
-              <div className="w-6 h-6 rounded-full bg-accent-secondary/15 border border-accent-secondary/30 text-accent-secondary font-bold text-xs flex items-center justify-center shrink-0">
-                {loc.memberName.charAt(0)}
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold text-text-primary truncate">
-                  {loc.memberName}
+          <div className="grid grid-cols-2 gap-2">
+            {meetup.locations.map((loc) => (
+              <div
+                key={loc.id}
+                className="p-2.5 rounded-xl bg-surface-secondary border border-border flex items-center gap-2.5"
+              >
+                <div className="w-7 h-7 rounded-full bg-primary-soft text-primary font-bold text-xs flex items-center justify-center shrink-0">
+                  {loc.memberName[0].toUpperCase()}
                 </div>
-                <div className="text-[10px] text-text-muted truncate flex items-center gap-0.5">
-                  <MapPin className="w-2.5 h-2.5 text-accent-primary shrink-0" />
-                  <span>{loc.label}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-text-primary truncate">
+                    {loc.memberName}
+                  </p>
+                  <p className="text-[11px] text-text-muted truncate">
+                    {loc.label}
+                  </p>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {/* Add Participant Input Form */}
-        {isAddingMember && (
-          <form onSubmit={handleAddParticipant} className="p-3 rounded-xl bg-surface-elevated border border-accent-secondary/30 flex flex-col gap-2 animate-in fade-in">
-            <div className="text-xs font-bold text-text-primary">Add Member Location</div>
-            <div className="grid grid-cols-2 gap-2">
+          {/* Inline Add Participant Drawer */}
+          {isAddingMember && (
+            <form onSubmit={handleAddParticipant} className="mt-3 p-3.5 rounded-xl bg-surface-secondary border border-border space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-text-primary">Add Friend Origin</span>
+                <button type="button" onClick={() => setIsAddingMember(false)} className="text-xs text-text-muted">Cancel</button>
+              </div>
               <input
                 type="text"
+                placeholder="Friend's Name (e.g. Diya)"
                 value={newMemberName}
                 onChange={(e) => setNewMemberName(e.target.value)}
-                placeholder="Name"
-                className="p-2 text-xs bg-surface border border-border rounded-lg text-text-primary focus:outline-none"
-                required
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-xs text-text-primary focus:outline-none focus:border-primary"
               />
               <input
                 type="text"
+                placeholder="Neighborhood / Area (e.g. Secunderabad)"
                 value={newMemberLabel}
                 onChange={(e) => setNewMemberLabel(e.target.value)}
-                placeholder="Starting Location (e.g. Madhapur)"
-                className="p-2 text-xs bg-surface border border-border rounded-lg text-text-primary focus:outline-none"
-                required
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-xs text-text-primary focus:outline-none focus:border-primary"
               />
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setIsAddingMember(false)}
-                className="px-2 py-1 text-xs text-text-muted"
-              >
-                Cancel
-              </button>
               <button
                 type="submit"
-                className="px-3 py-1 text-xs bg-accent-secondary/20 text-accent-secondary border border-accent-secondary/40 rounded-lg font-bold"
+                className="w-full py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold"
               >
-                Add
+                Save Starting Point
               </button>
-            </div>
-          </form>
-        )}
-      </div>
-
-      {/* 3. Recommendation Modes (3 Distinct Modes) */}
-      <div className="flex flex-col gap-2 pt-1 border-t border-border">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => handleCalculateMatrix(rankingMode)}
-            disabled={calculating || meetup.locations.length === 0}
-            className="w-full py-2.5 rounded-xl bg-accent-secondary/20 hover:bg-accent-secondary/30 border border-accent-secondary/40 text-accent-secondary font-bold text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-sm"
-          >
-            {calculating ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Calculating Live Travel Times...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                {meetup.venues.length > 0 ? "Recalculate Travel Times" : "Find Best Meeting Places"}
-              </>
-            )}
-          </button>
+            </form>
+          )}
         </div>
 
-        {/* Mode Selector per requirement: 1. Fairest for Everyone, 2. Quickest Overall, 3. Best Group Match */}
-        {meetup.venues.length > 0 && (
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-surface-elevated border border-border">
+        {/* 3. RECOMMENDATION CRITERIA & RECALCULATE */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">
+              Recommendation Mode
+            </span>
+            <button
+              onClick={() => handleCalculateMatrix(rankingMode)}
+              disabled={calculating}
+              className="text-xs font-semibold text-primary hover:text-primary-hover flex items-center gap-1 disabled:opacity-50"
+            >
+              {calculating ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Calculating...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3 h-3" />
+                  <span>Refresh Matrix</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-surface-secondary border border-border">
             {[
-              { id: "fairest", label: "Fairest for Everyone", icon: Scale },
-              { id: "quickest", label: "Quickest Overall", icon: Zap },
-              { id: "best_match", label: "Best Group Match", icon: Star },
+              { id: "fairest" as RankingMode, label: "Fairest", icon: Scale },
+              { id: "quickest" as RankingMode, label: "Quickest", icon: Zap },
+              { id: "best_match" as RankingMode, label: "Best Match", icon: Star },
             ].map((m) => {
               const Icon = m.icon;
-              const isSelected = rankingMode === m.id;
+              const isActive = rankingMode === m.id;
               return (
                 <button
                   key={m.id}
                   onClick={() => {
-                    setRankingMode(m.id as RankingMode);
-                    handleCalculateMatrix(m.id as RankingMode);
+                    setRankingMode(m.id);
+                    handleCalculateMatrix(m.id);
                   }}
-                  className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all ${
-                    isSelected
-                      ? "bg-accent-secondary/20 text-accent-secondary border border-accent-secondary/40 shadow-sm"
-                      : "text-text-muted hover:text-text-primary"
+                  className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-medium transition-all ${
+                    isActive
+                      ? "bg-surface text-primary font-bold shadow-subtle"
+                      : "text-text-secondary hover:text-text-primary"
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -372,191 +402,158 @@ export function MeetupWorkspace({
               );
             })}
           </div>
-        )}
-      </div>
-
-      {error && (
-        <div className="p-2.5 rounded-lg bg-danger/10 border border-danger/30 text-xs text-danger flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
         </div>
-      )}
 
-      {/* 4. Confirmed Victory State */}
-      {confirmedVenue && (
-        <div className="p-4 rounded-xl bg-accent-primary/10 border border-accent-primary/40 flex flex-col gap-2.5 animate-in fade-in">
+        {/* 4. CANDIDATE VENUES SHORTLIST */}
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-accent-primary font-bold text-xs uppercase tracking-wider">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Confirmed Meeting Place</span>
-            </div>
-            {confirmedVenue.rating && (
-              <span className="text-xs font-bold text-accent-primary">
-                ★ {confirmedVenue.rating}
+            <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">
+              Candidate Venues ({meetup.venues.length})
+            </span>
+            {meetup.venues.length > 0 && (
+              <span className="text-[11px] text-text-muted">
+                1 vote per friend
               </span>
             )}
           </div>
 
-          <div className="text-sm font-bold text-text-primary">
-            {confirmedVenue.name}
-          </div>
-          <div className="text-xs text-text-muted">
-            {confirmedVenue.address}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 text-center pt-1 text-xs">
-            <div className="bg-surface/80 p-2 rounded-lg border border-border">
-              <div className="text-[10px] text-text-muted">AVG TRAVEL TIME</div>
-              <div className="text-text-primary font-bold mt-0.5">
-                {formatDuration(confirmedVenue.avgDurationSec * 1000)}
-              </div>
+          {meetup.venues.length === 0 ? (
+            <div className="p-6 rounded-xl border border-dashed border-border text-center space-y-2">
+              <Sparkles className="w-6 h-6 text-primary mx-auto" />
+              <p className="text-xs font-bold text-text-primary">No venues generated yet</p>
+              <p className="text-[11px] text-text-muted">
+                Click Refresh Matrix above to compute real road travel times from each participant origin.
+              </p>
+              <button
+                onClick={() => handleCalculateMatrix("fairest")}
+                disabled={calculating}
+                className="mt-2 py-2 px-4 rounded-lg bg-primary text-white text-xs font-semibold shadow-subtle hover:bg-primary-hover"
+              >
+                Calculate Travel Fairness
+              </button>
             </div>
-            <div className="bg-surface/80 p-2 rounded-lg border border-border">
-              <div className="text-[10px] text-text-muted">MAX TRAVEL TIME</div>
-              <div className="text-accent-secondary font-bold mt-0.5">
-                {formatDuration(confirmedVenue.maxDurationSec * 1000)}
-              </div>
-            </div>
-          </div>
-
-          <div className="text-[11px] text-accent-primary/90 bg-accent-primary/5 p-2 rounded-lg border border-accent-primary/20 flex items-start gap-1.5 mt-1">
-            <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-            <span>{confirmedVenue.recommendationReason}</span>
-          </div>
-        </div>
-      )}
-
-      {/* 5. Venue Comparison Cards */}
-      {meetup.venues.length > 0 && !confirmedVenue && (
-        <div className="flex flex-col gap-3">
-          <div className="text-xs font-bold text-text-secondary uppercase">
-            Recommended Venues ({meetup.venues.length})
-          </div>
-
-          <div className="flex flex-col gap-3">
-            {meetup.venues.map((venue, idx) => {
-              const isTopPick = idx === 0;
-              const userVotedThis = meetup.votes[currentMemberId] === venue.venueId;
+          ) : (
+            meetup.venues.map((venue, idx) => {
+              const hasVoted = meetup.votes[currentMemberId] === venue.venueId;
+              const isSelected = venue.venueId === meetup.confirmedVenueId;
+              const isExpanded = expandedTimesVenueId === venue.id;
 
               return (
                 <div
-                  key={venue.venueId}
-                  className={`p-3.5 rounded-xl border transition-all flex flex-col gap-2.5 ${
-                    isTopPick
-                      ? "bg-surface-elevated border-accent-secondary/50 shadow-sm"
-                      : "bg-surface-elevated/70 border-border hover:border-text-muted"
+                  key={venue.id}
+                  className={`p-4 rounded-xl border transition-all ${
+                    isSelected
+                      ? "border-success bg-success/5 shadow-subtle"
+                      : "border-border bg-surface hover:border-primary/40 shadow-subtle"
                   }`}
                 >
-                  {/* Top: Name, Category, Rating */}
+                  {/* Card Header: Rank, Title, Rating */}
                   <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        {isTopPick && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-accent-secondary/20 text-accent-secondary border border-accent-secondary/30 uppercase">
-                            Top Recommendation
-                          </span>
-                        )}
-                        <span className="text-[11px] text-text-muted">
-                          {venue.category}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary-soft text-primary font-mono">
+                          #{idx + 1}
                         </span>
+                        <h4 
+                          onClick={() => onSelectVenueOnMap && onSelectVenueOnMap(venue)}
+                          className="text-sm font-bold text-text-primary hover:text-primary cursor-pointer truncate"
+                        >
+                          {venue.name}
+                        </h4>
                       </div>
-                      <h2 
-                        className="text-sm font-bold text-text-primary mt-0.5 cursor-pointer hover:text-accent-secondary transition-colors"
-                        onClick={() => onSelectVenueOnMap && onSelectVenueOnMap(venue)}
-                      >
-                        {venue.name}
-                      </h2>
-                      <p className="text-[11px] text-text-muted truncate mt-0.5">
+                      <p className="text-[11px] text-text-muted mt-0.5 truncate">
                         {venue.address}
                       </p>
                     </div>
 
                     {venue.rating && (
-                      <span className="text-xs font-bold text-warning shrink-0 bg-warning/10 px-2 py-0.5 rounded-md border border-warning/20">
-                        ★ {venue.rating}
+                      <span className="px-2 py-0.5 rounded-md bg-warning/15 text-warning text-xs font-bold shrink-0">
+                        ★ {venue.rating.toFixed(1)}
                       </span>
                     )}
                   </div>
 
-                  {/* Transparent Explanation (NO arbitrary scores) */}
-                  <div className="bg-surface/80 p-2 rounded-lg border border-border text-[11px] text-text-secondary flex items-start gap-1.5">
-                    <Info className="w-3.5 h-3.5 text-accent-secondary shrink-0 mt-0.5" />
-                    <span>{venue.recommendationReason}</span>
-                  </div>
-
-                  {/* Group Convenience: Average and Max Time */}
-                  <div className="grid grid-cols-2 gap-2 text-center text-[11px] bg-surface/50 p-2 rounded-lg border border-border/60">
-                    <div>
-                      <div className="text-[10px] text-text-muted">AVERAGE TIME</div>
-                      <div className="font-bold text-text-primary mt-0.5">
-                        {formatDuration(venue.avgDurationSec * 1000)}
-                      </div>
+                  {/* Summary Metric Pills */}
+                  <div className="grid grid-cols-2 gap-2 mt-3">
+                    <div className="p-2 rounded-lg bg-surface-secondary text-center">
+                      <p className="text-[10px] uppercase font-semibold text-text-muted">Avg Drive</p>
+                      <p className="text-xs font-bold text-text-primary tabular-nums">
+                        ~{Math.round(venue.avgDurationSec / 60)} min
+                      </p>
                     </div>
-                    <div>
-                      <div className="text-[10px] text-text-muted">MAX TRAVEL TIME</div>
-                      <div className="font-bold text-text-secondary mt-0.5">
-                        {formatDuration(venue.maxDurationSec * 1000)}
-                      </div>
+                    <div className="p-2 rounded-lg bg-surface-secondary text-center">
+                      <p className="text-[10px] uppercase font-semibold text-text-muted">Time Gap</p>
+                      <p className={`text-xs font-bold tabular-nums ${Math.round(venue.disparitySec / 60) <= 12 ? "text-success" : "text-warning"}`}>
+                        ±{Math.round(venue.disparitySec / 60)} min
+                      </p>
                     </div>
                   </div>
 
-                  {/* Each Participant's Individual Travel Time */}
-                  <div className="flex flex-col gap-1 text-[11px] pt-1">
-                    <div className="text-[10px] text-text-muted uppercase font-semibold">
-                      Travel Time for Each Member:
-                    </div>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {venue.participantTimes.map((pt) => (
-                        <div key={pt.memberId} className="flex items-center justify-between p-1.5 rounded bg-surface/70 border border-border/40 text-[11px]">
-                          <span className="truncate text-text-primary font-medium">
-                            {pt.memberName}
-                          </span>
-                          <span className="font-bold text-accent-secondary shrink-0 ml-1">
-                            {formatDuration(pt.durationSeconds * 1000)}
-                          </span>
+                  {/* Transparent Recommendation Reason */}
+                  <p className="text-xs text-text-secondary mt-2.5 font-medium italic">
+                    &ldquo;{venue.recommendationReason}&rdquo;
+                  </p>
+
+                  {/* Expandable Individual Travel Times */}
+                  {venue.participantTimes && venue.participantTimes.length > 0 && (
+                    <div className="mt-2.5 pt-2 border-t border-border/60">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedTimesVenueId(isExpanded ? null : venue.id)}
+                        className="w-full flex items-center justify-between text-[11px] font-semibold text-text-muted hover:text-text-primary"
+                      >
+                        <span>Individual travel times ({venue.participantTimes.length})</span>
+                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+
+                      {isExpanded && (
+                        <div className="mt-2 space-y-1.5 pl-1">
+                          {venue.participantTimes.map((pt, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs">
+                              <span className="text-text-secondary font-medium">
+                                {pt.memberName} <span className="text-text-muted">({pt.originLabel})</span>
+                              </span>
+                              <span className="text-primary font-bold font-mono tabular-nums">
+                                {formatDuration(pt.durationSeconds)} ({formatDistance(pt.distanceMeters)})
+                              </span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
+                  )}
 
-                  {/* Action Controls: Vote & Confirm */}
-                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                  {/* Voting & Confirmation Buttons */}
+                  <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-border/80">
                     <button
                       onClick={() => handleVote(venue.venueId)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                        userVotedThis
-                          ? "bg-accent-primary/25 text-accent-primary border border-accent-primary/50"
-                          : "bg-surface-elevated text-text-secondary hover:text-text-primary border border-border"
+                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                        hasVoted
+                          ? "bg-primary text-white font-bold"
+                          : "bg-surface-secondary hover:bg-surface text-text-secondary hover:text-text-primary border border-border"
                       }`}
                     >
                       <ThumbsUp className="w-3.5 h-3.5" />
-                      <span>{userVotedThis ? "Voted" : "Vote"} ({venue.voteCount})</span>
+                      <span>{hasVoted ? "Voted" : "Vote"} ({venue.voteCount || 0})</span>
                     </button>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onSelectVenueOnMap && onSelectVenueOnMap(venue)}
-                        className="px-2.5 py-1.5 rounded-lg bg-surface border border-border text-xs text-text-muted hover:text-text-primary flex items-center gap-1 transition-colors"
-                      >
-                        <Navigation className="w-3 h-3" />
-                        Preview
-                      </button>
-
+                    {meetup.status !== "confirmed" && (
                       <button
                         onClick={() => handleConfirmVenue(venue.venueId)}
                         disabled={confirming}
-                        className="px-3.5 py-1.5 rounded-lg bg-accent-secondary/20 hover:bg-accent-secondary/30 border border-accent-secondary/40 text-accent-secondary text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1"
+                        className="py-1.5 px-3 rounded-lg bg-success hover:bg-success/90 text-white text-xs font-semibold flex items-center gap-1 transition-colors"
                       >
-                        {confirming ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Confirm Venue"}
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Confirm</span>
                       </button>
-                    </div>
+                    )}
                   </div>
                 </div>
               );
-            })}
-          </div>
+            })
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

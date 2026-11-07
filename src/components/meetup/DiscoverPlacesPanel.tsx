@@ -44,12 +44,12 @@ export function DiscoverPlacesPanel({
   }, [category, currentCenter]);
 
   return (
-    <div className="w-full max-w-sm bg-surface/95 backdrop-blur-md border border-border rounded-xl shadow-panel-glow p-4 flex flex-col gap-3 max-h-[80vh] overflow-y-auto">
+    <div className="w-full max-w-sm bg-surface border border-border rounded-2xl shadow-card p-4 flex flex-col gap-3 max-h-[80vh] overflow-y-auto animate-in fade-in transition-colors">
       <div className="flex items-center justify-between border-b border-border pb-2.5">
         <div className="flex items-center gap-2">
-          <Compass className="w-4 h-4 text-accent-secondary" />
-          <span className="text-xs font-bold uppercase tracking-wider text-text-primary font-mono">
-            Discover Places
+          <Compass className="w-4 h-4 text-primary" />
+          <span className="text-xs font-bold uppercase tracking-wider text-text-primary">
+            Explore Nearby Places
           </span>
         </div>
         <button
@@ -61,23 +61,23 @@ export function DiscoverPlacesPanel({
       </div>
 
       {/* Category Pills */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         {(
           [
             { id: "restaurant", label: "Dining" },
             { id: "cafe", label: "Cafes" },
             { id: "cinema", label: "Movies" },
             { id: "park", label: "Parks" },
-            { id: "shopping", label: "Malls" },
+            { id: "shopping", label: "Shopping" },
           ] as const
         ).map((item) => (
           <button
             key={item.id}
             onClick={() => setCategory(item.id)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
               category === item.id
-                ? "bg-accent-secondary/20 text-accent-secondary font-bold border border-accent-secondary/40"
-                : "bg-surface-elevated text-text-muted hover:text-text-primary"
+                ? "bg-primary text-white font-bold shadow-subtle"
+                : "bg-surface-secondary text-text-secondary hover:text-text-primary"
             }`}
           >
             {item.label}
@@ -88,8 +88,8 @@ export function DiscoverPlacesPanel({
       {/* Venues List */}
       {loading ? (
         <div className="py-8 flex flex-col items-center justify-center gap-2 text-xs text-text-muted">
-          <Loader2 className="w-5 h-5 animate-spin text-accent-secondary" />
-          <span>Searching real venues...</span>
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          <span>Discovering local venues...</span>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -97,14 +97,14 @@ export function DiscoverPlacesPanel({
             <div
               key={v.venueId}
               onClick={() => onSelectVenue(v)}
-              className="p-2.5 rounded-lg bg-surface-elevated/70 border border-border hover:border-accent-secondary/50 cursor-pointer transition-all flex flex-col gap-1 group"
+              className="p-3 rounded-xl bg-surface-secondary hover:bg-surface border border-border hover:border-primary/40 cursor-pointer transition-all flex flex-col gap-1 group shadow-subtle"
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="text-xs font-bold text-text-primary group-hover:text-accent-secondary transition-colors truncate">
+                <div className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors truncate">
                   {v.name}
                 </div>
                 {v.rating && (
-                  <span className="text-[11px] font-mono text-warning font-bold shrink-0">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-warning/15 text-warning font-bold shrink-0">
                     ★ {v.rating}
                   </span>
                 )}
@@ -112,10 +112,10 @@ export function DiscoverPlacesPanel({
               <div className="text-[11px] text-text-muted truncate">
                 {v.address}
               </div>
-              <div className="flex items-center justify-between text-[10px] text-text-muted font-mono pt-1">
-                <span>{v.category}</span>
-                <span className="text-accent-secondary flex items-center gap-0.5">
-                  <Navigation className="w-2.5 h-2.5" /> View on Map
+              <div className="flex items-center justify-between text-[10px] text-text-muted pt-1 border-t border-border/50">
+                <span className="capitalize">{v.category}</span>
+                <span className="text-primary font-medium flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                  <Navigation className="w-3 h-3" /> View on Map
                 </span>
               </div>
             </div>
