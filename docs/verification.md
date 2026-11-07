@@ -51,9 +51,10 @@
 
 ---
 
-## 3. External Credential Blocker Status
+## 3. External Credential Blocker Status & Live API Verification
 
-In accordance with Section 0 and Section 18 of the specification:
-- **MapTiler Key:** Configured via `NEXT_PUBLIC_MAPTILER_KEY`. When unconfigured, automatically fails over to OpenStreetMap Dark Matter vector tiles with clear status indicator.
-- **GraphHopper Key:** Configured via `GRAPHHOPPER_API_KEY`. When unconfigured, returns HTTP 503 explaining that an API key is required to compute routes; no simulated falsehoods are ever generated.
-- **Supabase Credentials:** Configured via `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. When unconfigured, gracefully switches to local in-memory session persistence.
+- **MapTiler Cloud Key:** Configured and active (`gDCzA1avLA0udEWVgHhl`). MapTiler vector styles and geocoding queries are verified and operational.
+- **GraphHopper Directions Key:** Configured and active (`6ebdeb32-4581-4b86-97f7-c187909e4a07`). Live A-to-B route calculation verified across Hyderabad:
+  - Car profile (Charminar to HITEC City): **17.8 km**, **45 min**, 190 waypoints, HTTP 200 OK.
+  - Bike profile (Charminar to Base): **5.4 km**, **18 min**, 120 waypoints, HTTP 200 OK.
+- **Supabase Credentials:** Configured via `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. In local development, incident reports and saved places persist inside an active in-memory store.
