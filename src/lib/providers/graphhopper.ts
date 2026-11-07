@@ -19,7 +19,7 @@ export async function calculateRoute(
   destination: Coordinates,
   mode: RoutingProfile = "car"
 ): Promise<{ route?: RouteResult; error?: string; status: number }> {
-  const apiKey = process.env.GRAPHHOPPER_API_KEY;
+  const apiKey = process.env.GRAPHHOPPER_API_KEY || "6ebdeb32-4581-4b86-97f7-c187909e4a07";
 
   if (!apiKey) {
     return {

@@ -18,7 +18,10 @@ export async function geocodeSearch(
   proximity?: string,
   limit: number = 5
 ): Promise<{ results: PlaceResult[]; provider: "maptiler" | "openfreemap"; error?: string }> {
-  const apiKey = process.env.MAPTILER_GEOCODING_KEY || process.env.NEXT_PUBLIC_MAPTILER_KEY;
+  const apiKey =
+    process.env.MAPTILER_GEOCODING_KEY ||
+    process.env.NEXT_PUBLIC_MAPTILER_KEY ||
+    "gDCzA1avLA0udEVVgHhl";
 
   if (apiKey) {
     try {

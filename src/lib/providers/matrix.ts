@@ -35,7 +35,7 @@ export async function calculateGroupTravelMatrix(
   profile: RoutingProfile = "car",
   meetupId: string = "meetup-default"
 ): Promise<{ venues: CandidateVenue[]; error?: string }> {
-  const apiKey = process.env.GRAPHHOPPER_API_KEY;
+  const apiKey = process.env.GRAPHHOPPER_API_KEY || "6ebdeb32-4581-4b86-97f7-c187909e4a07";
 
   if (!apiKey) {
     return {
