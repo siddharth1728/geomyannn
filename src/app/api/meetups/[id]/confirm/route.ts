@@ -30,7 +30,7 @@ export async function POST(
     return NextResponse.json({ error: "venueId is required to confirm meetup" }, { status: 400 });
   }
 
-  const selectedVenue = meetup.venues.find((v) => v.venueId === venueId);
+  const selectedVenue = meetup.venues.find((v) => v.venueId === venueId || v.id === venueId);
   if (!selectedVenue) {
     return NextResponse.json({ error: "Venue not found in candidate shortlist" }, { status: 404 });
   }

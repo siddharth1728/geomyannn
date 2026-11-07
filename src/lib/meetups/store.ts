@@ -4,6 +4,133 @@ import { getSupabaseServerClient } from "../supabase/server";
 // In-memory persistent store for development & offline resilience
 const inMemoryMeetups: Map<string, Meetup> = new Map();
 
+// Initialize flagship Hyderabad 4-origin demo
+function seedHyderabadDemo() {
+  const hydDemo: Meetup = {
+    id: "hyd-demo-1",
+    creatorId: "u1",
+    creatorName: "Aarav",
+    title: "Hyderabad Weekend Hangout",
+    category: "cafe",
+    description: "4 friends meeting from 4 corners of Hyderabad to find the fairest spot.",
+    plannedAt: new Date(Date.now() + 86400000).toISOString(),
+    budget: "moderate",
+    transportMode: "car",
+    status: "voting",
+    inviteCode: "HYD789",
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 86400000 * 7).toISOString(),
+    preferences: {
+      category: "cafe",
+      budget: "moderate",
+      cuisine: "any",
+      dietary: "any",
+      atmosphere: "casual",
+      maxTravelTimeMinutes: 35,
+    },
+    members: [
+      { id: "mem-1", meetupId: "hyd-demo-1", userId: "u1", userName: "Aarav", role: "creator", joinedAt: new Date().toISOString() },
+      { id: "mem-2", meetupId: "hyd-demo-1", userId: "u2", userName: "Diya", role: "member", joinedAt: new Date().toISOString() },
+      { id: "mem-3", meetupId: "hyd-demo-1", userId: "u3", userName: "Rohan", role: "member", joinedAt: new Date().toISOString() },
+      { id: "mem-4", meetupId: "hyd-demo-1", userId: "u4", userName: "Ananya", role: "member", joinedAt: new Date().toISOString() },
+    ],
+    locations: [
+      { id: "loc-1", meetupId: "hyd-demo-1", memberId: "u1", memberName: "Aarav", label: "Kukatpally", latitude: 17.4947, longitude: 78.3996, updatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86400000).toISOString() },
+      { id: "loc-2", meetupId: "hyd-demo-1", memberId: "u2", memberName: "Diya", label: "Secunderabad", latitude: 17.4399, longitude: 78.4983, updatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86400000).toISOString() },
+      { id: "loc-3", meetupId: "hyd-demo-1", memberId: "u3", memberName: "Rohan", label: "Mehdipatnam", latitude: 17.3916, longitude: 78.4414, updatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86400000).toISOString() },
+      { id: "loc-4", meetupId: "hyd-demo-1", memberId: "u4", memberName: "Ananya", label: "Dilsukhnagar", latitude: 17.3688, longitude: 78.5247, updatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86400000).toISOString() },
+    ],
+    venues: [
+      {
+        id: "c-venue-roastery",
+        meetupId: "hyd-demo-1",
+        venueId: "roastery",
+        name: "Roastery Coffee House",
+        category: "cafe",
+        address: "Road No 14, Banjara Hills",
+        latitude: 17.4184,
+        longitude: 78.4382,
+        rating: 4.7,
+        priceLevel: "₹₹",
+        avgDurationSec: 1320,
+        maxDurationSec: 1560,
+        minDurationSec: 1080,
+        disparitySec: 480,
+        totalDurationSec: 5280,
+        recommendationReason: "Exceptional fairness: only an 8-minute gap between closest and farthest friend.",
+        participantTimes: [
+          { memberId: "u1", memberName: "Aarav", originLabel: "Kukatpally", durationSeconds: 1560, distanceMeters: 13200 },
+          { memberId: "u2", memberName: "Diya", originLabel: "Secunderabad", durationSeconds: 1380, distanceMeters: 11400 },
+          { memberId: "u3", memberName: "Rohan", originLabel: "Mehdipatnam", durationSeconds: 1080, distanceMeters: 6200 },
+          { memberId: "u4", memberName: "Ananya", originLabel: "Dilsukhnagar", durationSeconds: 1260, distanceMeters: 12800 },
+        ],
+        voteCount: 3,
+      },
+      {
+        id: "c-venue-paradise",
+        meetupId: "hyd-demo-1",
+        venueId: "paradise",
+        name: "Paradise Biryani",
+        category: "restaurant",
+        address: "MG Road, Secunderabad",
+        latitude: 17.4416,
+        longitude: 78.4878,
+        rating: 4.5,
+        priceLevel: "₹₹",
+        avgDurationSec: 1260,
+        maxDurationSec: 1980,
+        minDurationSec: 360,
+        disparitySec: 1620,
+        totalDurationSec: 5040,
+        recommendationReason: "Convenient for Diya (6 min), but involves up to a 33-minute trip for Aarav.",
+        participantTimes: [
+          { memberId: "u1", memberName: "Aarav", originLabel: "Kukatpally", durationSeconds: 1980, distanceMeters: 15400 },
+          { memberId: "u2", memberName: "Diya", originLabel: "Secunderabad", durationSeconds: 360, distanceMeters: 2100 },
+          { memberId: "u3", memberName: "Rohan", originLabel: "Mehdipatnam", durationSeconds: 1320, distanceMeters: 11800 },
+          { memberId: "u4", memberName: "Ananya", originLabel: "Dilsukhnagar", durationSeconds: 1380, distanceMeters: 12200 },
+        ],
+        voteCount: 1,
+      },
+      {
+        id: "c-venue-hardrock",
+        meetupId: "hyd-demo-1",
+        venueId: "hardrock",
+        name: "Hard Rock Cafe",
+        category: "entertainment",
+        address: "GVK One Mall, Banjara Hills",
+        latitude: 17.4194,
+        longitude: 78.4485,
+        rating: 4.6,
+        priceLevel: "₹₹₹",
+        avgDurationSec: 1380,
+        maxDurationSec: 1620,
+        minDurationSec: 1140,
+        disparitySec: 480,
+        totalDurationSec: 5520,
+        recommendationReason: "Balanced central location with an average drive time of 23 minutes.",
+        participantTimes: [
+          { memberId: "u1", memberName: "Aarav", originLabel: "Kukatpally", durationSeconds: 1620, distanceMeters: 13800 },
+          { memberId: "u2", memberName: "Diya", originLabel: "Secunderabad", durationSeconds: 1260, distanceMeters: 9800 },
+          { memberId: "u3", memberName: "Rohan", originLabel: "Mehdipatnam", durationSeconds: 1140, distanceMeters: 6800 },
+          { memberId: "u4", memberName: "Ananya", originLabel: "Dilsukhnagar", durationSeconds: 1500, distanceMeters: 13400 },
+        ],
+        voteCount: 0,
+      },
+    ],
+    votes: {
+      u1: "roastery",
+      u3: "roastery",
+      u4: "roastery",
+      u2: "paradise",
+    },
+  };
+
+  inMemoryMeetups.set(hydDemo.id, hydDemo);
+  inMemoryMeetups.set(hydDemo.inviteCode, hydDemo);
+}
+
+seedHyderabadDemo();
+
 // Helper to generate a friendly 6-character alphanumeric invite code (e.g. HYD-782)
 export function generateInviteCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

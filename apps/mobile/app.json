@@ -1,0 +1,81 @@
+{
+  "expo": {
+    "name": "GEORYNTH",
+    "slug": "georynth",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "georynth",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#020617"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.georynth.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "GEORYNTH uses your location to calculate fair group meeting spots when you voluntarily share it."
+      },
+      "associatedDomains": [
+        "applinks:georynth.app"
+      ]
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#020617"
+      },
+      "package": "com.georynth.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "georynth",
+              "host": "meetup"
+            },
+            {
+              "scheme": "https",
+              "host": "georynth.app",
+              "pathPrefix": "/meetup"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "GEORYNTH uses your location to calculate fair group meeting spots when you voluntarily share it."
+        }
+      ],
+      "@maplibre/maplibre-react-native"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "georynth-production"
+      },
+      "maptilerKey": "gDCzA1avLA0udEVVgHhl",
+      "supabaseUrl": "https://ppytdnhvvbmhaaurydza.supabase.co",
+      "supabasePublishableKey": "sb_publishable_1PBI0qGXF2hKfxqmkQhJkg_l0B5YuLU",
+      "apiBaseUrl": "http://localhost:3000"
+    }
+  }
+}

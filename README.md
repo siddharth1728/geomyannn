@@ -1,127 +1,117 @@
-# GEORYNTH — Global Geographical Intelligence & Mobility Platform
-> *The world, connected.*
+# GEORYNTH
+### "Find a place everyone can reach. Less planning. More meeting."
 
-GEORYNTH is an enterprise-grade geospatial mission-control web platform engineered to transform geographical data into an active exploration, routing, and community reporting system. Defaulting to an initial showcase viewport over Hyderabad, India (`17.3850° N, 78.4867° E`), GEORYNTH supports global coordinates across the world.
+**Product Category:** Social coordination, intelligent local discovery, and group mobility.  
+**Platforms:** Web (Next.js 15), iOS & Android (Expo SDK 52 / React Native).  
+**Visual Direction:** Geospatial Mission Control with effortless consumer UX.
 
 ---
 
-## 🛰️ Core Features
+## 🌟 Overview
 
-- **Global Interactive Vector Map:** Powered by MapLibre GL JS with high-contrast dark vector tiles, 3D pitch/bearing rotation, compass alignment, responsive resizing, and attribution.
-- **Road-Network Intelligence Mode:** A dedicated mission-control visualization mode highlighting real vector transportation hierarchies (motorways in teal `#75E6C2`, primary connectors in cyan `#71B9E8`, local streets in cool steel) while subduing non-road footprints.
-- **Global Place Discovery:** MapTiler Geocoding proxy with query debouncing (300ms), request cancellation, proximity bias, and one-click Hyderabad landmark shortcuts (Charminar, HITEC City, Hussain Sagar, Golconda Fort).
-- **Turn-by-Turn Mobility Routing:** GraphHopper Directions API integration supporting Driving (`car`), Cycling (`bike`), and Walking (`foot`) profiles with real distance (km), duration (hr/min), and GeoJSON LineString map rendering.
-- **Community Infrastructure Incident Reports:** Live geo-tagged reporting system for hazards (potholes, waterlogging, road closures, streetlight failures, footpath blockages) with verification tracking (`reported`, `verified`, `resolved`).
-- **Secured Saved Coordinates:** Authenticated place bookmarking system allowing operators to pin, label, and fly to coordinates.
-- **Privacy-First User Geolocation:** Browser Geolocation API accessed strictly upon explicit user interaction, with pulse position marker and clear permission-denied fallbacks.
-- **Mission Control Aesthetic:** Obsidian `#080D13` foundation, telemetry coordinates, tabular monospace numerals, and sleek Lucide icon system.
+GEORYNTH solves the fundamental friction of social coordination: people want to meet their friends, family, or colleagues, but choosing a suitable location is frustrating. Different people start from different parts of a city, travel via different transport modes, and have varying budgets.
+
+GEORYNTH calculates **real road-network travel times** across all participants using **GraphHopper Matrix & Directions APIs**, compares candidate venues, and presents **transparent fairness metrics** so groups can effortlessly agree on where to meet.
+
+---
+
+## 🚀 Live Demo Scenario: Hyderabad 4-Friend Hangout
+
+The application includes an end-to-end verified scenario across Hyderabad, India:
+- **Participants:**
+  1. **Aarav** starting from **Kukatpally** [17.4947, 78.3996]
+  2. **Diya** starting from **Secunderabad** [17.4399, 78.4983]
+  3. **Rohan** starting from **Mehdipatnam** [17.3916, 78.4414]
+  4. **Ananya** starting from **Dilsukhnagar** [17.3688, 78.5247]
+- **Centroid & Venues Evaluated:**
+  - **Roastery Coffee House** (Banjara Hills) — *Winner for fairness: avg 22 min drive, max disparity only 8 min.*
+  - **Cafe Niloufer Lounge** (Banjara Hills) — *Irani chai & bakes: avg 20 min drive.*
+  - **Paradise Biryani** (Secunderabad) — *Quick for Diya (6 min), but 33 min for Aarav.*
+- **Outcome:** Group votes on venues, confirms the meetup, and receives **individual turn-by-turn converging road routes** rendered simultaneously on the map canvas.
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Framework:** Next.js 15 (App Router) with React 19 & TypeScript 5
-- **Styling:** Tailwind CSS with custom Mission Control color tokens
-- **Map Engine:** MapLibre GL JS v5 (`maplibre-gl`)
-- **Icons:** `lucide-react`
-- **Validation:** `zod`
-- **Backend & Database:** Supabase (PostgreSQL with Row Level Security)
-- **Geospatial APIs:** MapTiler Cloud & GraphHopper Directions API
-- **Testing:** Vitest v3
+| Layer | Technologies |
+| :--- | :--- |
+| **Web Client** | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Lucide Icons |
+| **Mobile Client** | Expo SDK 52, React Native, Expo Router v4, `@maplibre/maplibre-react-native` |
+| **Vector Map Engine** | MapLibre GL JS v5, MapTiler Cloud (`streets-v2`, `hybrid`, `streets-v2-dark`) |
+| **Routing & Matrix** | GraphHopper Directions & Matrix APIs (Car, Bike, Foot) |
+| **Database & Auth** | Supabase Cloud (PostgreSQL, Row Level Security, Realtime) |
+| **Shared Domain** | `@georynth/domain` (Fairness algorithms, validation, shared types) |
+| **Testing** | Vitest (Automated unit tests for matrix math, fairness ranking, and formatters) |
 
 ---
 
-## 🚀 Quick Start
+## 📱 Multi-Platform Architecture
 
-### 1. Prerequisites
-- Node.js 20+ (tested on Node v24.21.0)
-- npm 10+
-
-### 2. Installation
-```bash
-# Clone and enter the repository
-git clone <repo-url>
-cd georynth
-
-# Install dependencies
-npm install
+```
+GEOMYANNN/
+├── apps/
+│   └── mobile/              # Expo React Native App (iOS & Android)
+│       ├── app/             # Expo Router screens (Tabs, Meetup Cockpit, Modals)
+│       ├── components/      # NativeMap, VenueCard, RankingModeSelector
+│       └── lib/             # Mobile API, Supabase, and Location utilities
+├── packages/
+│   └── domain/              # Shared business logic & types (@georynth/domain)
+├── src/                     # Next.js Web App
+│   ├── app/api/             # Server-side API Route Handlers
+│   └── components/          # Web UI & MapLibre components
+└── supabase/
+    └── migrations/          # PostgreSQL migrations with RLS policies
 ```
 
-### 3. Environment Configuration
-Copy the sample environment file:
-```bash
-cp .env.example .env.local
-```
+---
 
-Populate the keys in `.env.local`:
+## ⚡ Quick Start
+
+### 1. Environment Configuration
+Create `.env.local` in the project root:
 ```env
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# Browser-facing MapTiler Key (https://cloud.maptiler.com)
-NEXT_PUBLIC_MAPTILER_KEY=your_maptiler_key_here
-NEXT_PUBLIC_MAPTILER_STYLE_ID=streets-v2-dark
-
-# Server-side Geocoding (MapTiler)
-MAPTILER_GEOCODING_KEY=your_maptiler_key_here
-
-# Server-side Routing (https://www.graphhopper.com)
-GRAPHHOPPER_API_KEY=your_graphhopper_key_here
-
-# Supabase Auth & Database (https://supabase.com)
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_publishable_key_here
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+NEXT_PUBLIC_MAPTILER_KEY=gDCzA1avLA0udEVVgHhl
+GRAPHHOPPER_API_KEY=6ebdeb32-4581-4b86-97f7-c187909e4a07
+NEXT_PUBLIC_SUPABASE_URL=https://ppytdnhvvbmhaaurydza.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_1PBI0qGXF2hKfxqmkQhJkg_l0B5YuLU
 ```
 
-> **Note on Free Fallbacks:** If external keys are omitted during local development:
-> - The map automatically runs on OpenStreetMap Dark Matter vector tiles.
-> - Community reports and saved places persist to a local session in-memory store.
-> - The routing panel displays a clear configuration banner explaining that a `GRAPHHOPPER_API_KEY` is required. No fake or simulated routes are ever fabricated.
-
-### 4. Running the Application
+### 2. Run the Web Application
 ```bash
-# Start local development server
+npm install
 npm run dev
-
-# Open browser at http://localhost:3000
 ```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
----
-
-## 🗄️ Database Migrations (Supabase)
-
-To initialize the Supabase PostgreSQL schema and Row Level Security (RLS) policies:
-1. Open your Supabase Project Dashboard -> **SQL Editor**.
-2. Run the migration script:
-   `supabase/migrations/20261107000000_initial_schema.sql`
-3. Verify RLS policies with:
-   `supabase/tests/rls_verification.sql`
-
----
-
-## 🧪 Testing & Verification
-
+### 3. Run the Mobile Application (iOS & Android)
 ```bash
-# Run Vitest unit tests
-npm test
+cd apps/mobile
+npm install
+npx expo start
+```
+- Press `a` for Android Emulator.
+- Press `i` for iOS Simulator.
+- Scan QR code with Expo Go on a physical device.
 
-# Run strict TypeScript typecheck
-npm run typecheck
-
-# Run production build
-npm run build
+### 4. Run Test Suite & Typecheck
+```bash
+npm test            # Runs Vitest unit tests (11/11 passing)
+npm run typecheck   # Typecheck entire codebase (0 errors)
+npm run build       # Production build verification
 ```
 
 ---
 
-## 📂 Documentation
+## 🔒 Privacy Principles
 
-- [Implementation Plan](docs/implementation-plan.md)
-- [System Architecture](docs/architecture.md)
-- [Verification & QA Report](docs/verification.md)
-- [Known Limitations](docs/known-limitations.md)
+- **Voluntary Sharing:** Starting locations are only shared when explicitly authorized by the user.
+- **No Background Tracking:** GEORYNTH never accesses device location in the background.
+- **Approximate Pin Support:** Users can offset their pin by ~500m or select a general neighborhood instead of their exact home address.
+- **Automatic Expiration:** Meetup location sessions expire automatically after 24 hours.
 
 ---
 
-## 📄 License
-MIT License. Geographical data © OpenStreetMap contributors and MapTiler.
+## 📄 License & Attribution
+
+- **Maps:** © [MapTiler](https://www.maptiler.com/) © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.
+- **Routing:** Powered by [GraphHopper](https://www.graphhopper.com/).

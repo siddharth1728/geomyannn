@@ -1,0 +1,8 @@
+{
+  "name": "@georynth/domain",
+  "version": "1.0.0",
+  "description": "Shared domain models, types, fairness algorithms and utilities for GEORYNTH Web and Mobile",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "private": true
+}
