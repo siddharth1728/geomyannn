@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #080D13;
+  --surface: #101821;
+  --surface-elevated: #17222D;
+  --surface-muted: #1B2833;
+
+  --text-primary: #F2F6F8;
+  --text-secondary: #A0AFBA;
+  --text-muted: #6E7F8B;
+
+  --accent-primary: #75E6C2;
+  --accent-secondary: #71B9E8;
+
+  --warning: #E8B86B;
+  --danger: #EF777D;
+
+  --border: rgba(178, 205, 220, 0.13);
+
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+  color: var(--text-primary);
+  background: var(--background);
+  font-family: var(--font-sans);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Custom scrollbar for mission panels */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-muted);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
+
+/* MapLibre canvas full reset */
+.maplibregl-canvas-container,
+.maplibregl-canvas {
+  outline: none;
+}
