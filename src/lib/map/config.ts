@@ -1,20 +1,29 @@
 export const HYDERABAD_CENTER: [number, number] = [78.4867, 17.385]; // [lon, lat]
-export const DEFAULT_ZOOM = 11.2;
+export const DEFAULT_ZOOM = 11.5;
 
-export function getMapStyleUrl(): { url: string; isFallback: boolean } {
-  const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY;
-  const styleId = process.env.NEXT_PUBLIC_MAPTILER_STYLE_ID || "streets-v2-dark";
+export type MapStyleType = "streets" | "hybrid" | "dark";
+
+export function getMapStyleUrl(selectedStyle: MapStyleType = "streets"): { url: string; isFallback: boolean } {
+  const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY || "gDCzA1avLA0udEVVgHhl";
+
+  const styleIdMap: Record<MapStyleType, string> = {
+    streets: "streets-v2", // Rich Google Maps style with all places, POIs, roads, transit
+    hybrid: "hybrid",       // High-res satellite imagery + labeled roads & places
+    dark: "streets-v2-dark" // Mission Control dark mode
+  };
+
+  const styleId = styleIdMap[selectedStyle] || "streets-v2";
 
   if (maptilerKey && maptilerKey.trim().length > 0) {
     return {
-      url: `https://api.maptiler.com/maps/${styleId}/style.json?key=${maptilerKey}`,
+      url: `https://api.maptiler.com/maps/${styleId}/style.json?key=${maptilerKey.trim()}`,
       isFallback: false,
     };
   }
 
-  // Fallback to high-contrast open dark vector tiles when MapTiler key is not yet supplied
+  // Reliable open fallback modeled on Google Maps with all places & features
   return {
-    url: "https://tiles.openfreemap.org/styles/dark",
+    url: "https://tiles.openfreemap.org/styles/liberty",
     isFallback: true,
   };
 }

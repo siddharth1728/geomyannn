@@ -11,7 +11,7 @@ import {
   ActiveMode, 
   ProviderStatus 
 } from "@/types/geo";
-import { HYDERABAD_CENTER, DEFAULT_ZOOM } from "@/lib/map/config";
+import { HYDERABAD_CENTER, DEFAULT_ZOOM, MapStyleType } from "@/lib/map/config";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { MissionSidebar } from "@/components/layout/MissionSidebar";
 import { StatusBar } from "@/components/layout/StatusBar";
@@ -22,6 +22,7 @@ import { ReportDetailsPanel } from "@/components/reports/ReportDetailsPanel";
 import { SavedPlacesPanel } from "@/components/saved/SavedPlacesPanel";
 import { NetworkLegend } from "@/components/network/NetworkLegend";
 import { MapControls } from "@/components/map/MapControls";
+import { StyleSwitcher } from "@/components/map/StyleSwitcher";
 import { AuthModal } from "@/components/auth/AuthModal";
 import type { Map as MapLibreMap } from "maplibre-gl";
 
@@ -35,6 +36,7 @@ export default function GeorynthMissionApp() {
   // Navigation & panel states
   const [activeMode, setActiveMode] = useState<ActiveMode>("explore");
   const [networkModeActive, setNetworkModeActive] = useState(false);
+  const [mapStyleType, setMapStyleType] = useState<MapStyleType>("streets");
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -43,8 +45,8 @@ export default function GeorynthMissionApp() {
   const [viewport, setViewport] = useState({
     center: { latitude: HYDERABAD_CENTER[1], longitude: HYDERABAD_CENTER[0] },
     zoom: DEFAULT_ZOOM,
-    pitch: 35,
-    bearing: -10,
+    pitch: 0,
+    bearing: 0,
   });
 
   // Geographical entities
@@ -75,8 +77,8 @@ export default function GeorynthMissionApp() {
 
   // Provider configuration telemetry
   const [providerStatus, setProviderStatus] = useState<ProviderStatus>({
-    maptilerConfigured: false,
-    graphhopperConfigured: false,
+    maptilerConfigured: true,
+    graphhopperConfigured: true,
     supabaseConfigured: false,
   });
 
@@ -158,8 +160,8 @@ export default function GeorynthMissionApp() {
       mapInstanceRef.current.flyTo({
         center: HYDERABAD_CENTER,
         zoom: DEFAULT_ZOOM,
-        pitch: 35,
-        bearing: -10,
+        pitch: 0,
+        bearing: 0,
       });
     }
   };
@@ -213,9 +215,7 @@ export default function GeorynthMissionApp() {
     }
   };
 
-  // Click on map to open report modal at clicked coordinates
   const handleMapClick = (coords: Coordinates) => {
-    // If not clicking an existing feature, we can offer to report an incident
     setSelectedReport(null);
   };
 
@@ -243,6 +243,7 @@ export default function GeorynthMissionApp() {
             communityReports={communityReports}
             networkMode={networkModeActive}
             userLocation={userCoords}
+            mapStyleType={mapStyleType}
             onMapReady={(map) => {
               mapInstanceRef.current = map;
             }}
@@ -265,7 +266,7 @@ export default function GeorynthMissionApp() {
           </div>
 
           {/* Floating Contextual Panels (Directions, Saved, Report Details, Network) */}
-          <div className="absolute top-20 left-3 md:left-6 z-20 flex flex-col gap-3 max-h-[calc(100vh-140px)] overflow-y-auto">
+          <div className="absolute top-20 left-3 md:left-6 z-20 flex flex-col gap-3 max-h-[calc(100vh-160px)] overflow-y-auto">
             {/* Directions Panel */}
             {activeMode === "directions" && (
               <DirectionsPanel
@@ -326,8 +327,16 @@ export default function GeorynthMissionApp() {
             )}
           </div>
 
+          {/* Floating Google Map Style Switcher (Bottom-Left) */}
+          <div className="absolute bottom-5 left-4 z-20">
+            <StyleSwitcher
+              currentStyle={mapStyleType}
+              onSelectStyle={(s) => setMapStyleType(s)}
+            />
+          </div>
+
           {/* Floating Map Controls (Zoom, Reset, Compass, Locate) */}
-          <div className="absolute bottom-6 right-4 z-20">
+          <div className="absolute bottom-5 right-4 z-20">
             <MapControls
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
