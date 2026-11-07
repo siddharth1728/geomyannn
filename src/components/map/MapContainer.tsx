@@ -124,9 +124,27 @@ export function MapContainer({
           "circle-stroke-color": "#ffffff",
         },
       });
+
+      map.addLayer({
+        id: "participants-labels",
+        type: "symbol",
+        source: MAP_SOURCES.PARTICIPANTS,
+        layout: {
+          "text-field": ["get", "name"],
+          "text-size": 11,
+          "text-offset": [0, 1.4],
+          "text-anchor": "top",
+          "text-optional": true,
+        },
+        paint: {
+          "text-color": "#17211F",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 2,
+        },
+      });
     }
 
-    // 3. Candidate Venues Source & Layer (Orange/Purple Stars)
+    // 3. Candidate Venues Source & Layer (Ranked Badges)
     if (!map.getSource(MAP_SOURCES.VENUES)) {
       map.addSource(MAP_SOURCES.VENUES, {
         type: "geojson",
@@ -138,10 +156,33 @@ export function MapContainer({
         type: "circle",
         source: MAP_SOURCES.VENUES,
         paint: {
-          "circle-radius": 10,
-          "circle-color": "#7C3AED",
+          "circle-radius": 11,
+          "circle-color": [
+            "case",
+            ["==", ["get", "rank"], 1],
+            "#D97706",
+            "#7C3AED",
+          ],
           "circle-stroke-width": 3,
           "circle-stroke-color": "#ffffff",
+        },
+      });
+
+      map.addLayer({
+        id: "venues-labels",
+        type: "symbol",
+        source: MAP_SOURCES.VENUES,
+        layout: {
+          "text-field": ["concat", "#", ["get", "rank"], " ", ["get", "name"]],
+          "text-size": 12,
+          "text-offset": [0, 1.4],
+          "text-anchor": "top",
+          "text-optional": true,
+        },
+        paint: {
+          "text-color": "#17211F",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 2,
         },
       });
     }
@@ -281,7 +322,7 @@ export function MapContainer({
     map.on("click", (e) => {
       // Check candidate venues first
       const venueFeatures = map.queryRenderedFeatures(e.point, {
-        layers: [MAP_LAYERS.VENUES_CIRCLES],
+        layers: [MAP_LAYERS.VENUES_CIRCLES, "venues-labels"],
       });
 
       if (venueFeatures.length > 0 && onSelectVenue) {
@@ -316,6 +357,12 @@ export function MapContainer({
       map.getCanvas().style.cursor = "pointer";
     });
     map.on("mouseleave", MAP_LAYERS.VENUES_CIRCLES, () => {
+      map.getCanvas().style.cursor = "";
+    });
+    map.on("mouseenter", "venues-labels", () => {
+      map.getCanvas().style.cursor = "pointer";
+    });
+    map.on("mouseleave", "venues-labels", () => {
       map.getCanvas().style.cursor = "";
     });
 
@@ -432,7 +479,7 @@ export function MapContainer({
 
     source.setData({
       type: "FeatureCollection",
-      features: candidateVenues.map((v) => ({
+      features: candidateVenues.map((v, i) => ({
         type: "Feature",
         geometry: {
           type: "Point",
@@ -443,6 +490,7 @@ export function MapContainer({
           name: v.name,
           category: v.category,
           avgDurationSec: v.avgDurationSec,
+          rank: i + 1,
         },
       })),
     });

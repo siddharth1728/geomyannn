@@ -29,6 +29,7 @@ import { MeetupWorkspace } from "@/components/meetup/MeetupWorkspace";
 import { DiscoverPlacesPanel } from "@/components/meetup/DiscoverPlacesPanel";
 import { MyMeetupsList } from "@/components/meetup/MyMeetupsList";
 import { HeroWelcomeCard } from "@/components/meetup/HeroWelcomeCard";
+import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { Map as MapLibreMap } from "maplibre-gl";
 
 const DynamicMapContainer = dynamic(
@@ -44,6 +45,7 @@ export default function GeorynthApp() {
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isDockCollapsed, setIsDockCollapsed] = useState(false);
 
   // Group Meetup state
   const [allMeetups, setAllMeetups] = useState<Meetup[]>([]);
@@ -97,6 +99,16 @@ export default function GeorynthApp() {
 
   const mapInstanceRef = useRef<MapLibreMap | null>(null);
 
+  // Smoothly trigger MapLibre resize when dock collapses/expands
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.resize();
+      }
+    }, 320);
+    return () => clearTimeout(timer);
+  }, [isDockCollapsed]);
+
   // Initialize meetups and provider telemetry
   useEffect(() => {
     async function init() {
@@ -119,7 +131,6 @@ export default function GeorynthApp() {
           const m = await meetupsRes.json();
           if (m.meetups && m.meetups.length > 0) {
             setAllMeetups(m.meetups);
-            // Default to first active meetup if available
             setActiveMeetup(m.meetups[0]);
           }
         }
@@ -186,11 +197,13 @@ export default function GeorynthApp() {
         if (data.meetup) {
           setActiveMeetup(data.meetup);
           setActiveMode("active_meetup");
+          setIsDockCollapsed(false);
 
           if (mapInstanceRef.current) {
             mapInstanceRef.current.flyTo({
               center: [78.4485, 17.4194],
-              zoom: 12,
+              zoom: 12.5,
+              duration: 1200,
             });
           }
         }
@@ -200,25 +213,184 @@ export default function GeorynthApp() {
     }
   };
 
-  // Adjust map camera padding so selected venues and routes are never hidden behind the left panel
-  const isPanelOpen = activeMode !== "explore" || activeMeetup !== null;
-
   return (
     <div className="flex flex-col h-screen w-screen bg-background text-text-primary overflow-hidden font-sans select-none">
-      {/* 1. Universal Responsive Header */}
+      {/* 1. Global Navigation Header */}
       <AppHeader
         activeMode={activeMode}
-        onChangeMode={(mode) => setActiveMode(mode)}
+        onChangeMode={(mode) => {
+          setActiveMode(mode);
+          if (isDockCollapsed) setIsDockCollapsed(false);
+        }}
         onOpenPlanModal={() => setIsPlanModalOpen(true)}
         onOpenSettings={() => setIsAuthModalOpen(true)}
-        activeMeetupTitle={activeMeetup?.title}
         meetupCount={allMeetups.length}
       />
 
-      {/* 2. Main Work Area */}
-      <main className="relative flex-1 w-full h-[calc(100vh-56px)] overflow-hidden">
-        {/* Full-bleed MapLibre Vector Canvas */}
-        <div className="absolute inset-0 z-0">
+      {/* 2. Integrated Two-Column Workspace (Google Maps-Grade Shell) */}
+      <main className="relative flex-1 w-full h-[calc(100vh-56px)] flex overflow-hidden">
+        {/* Left Column: Context / Results / Meetup Dock (380-420px, Collapsible) */}
+        <aside
+          className={`h-full border-r border-border bg-surface flex flex-col z-20 shrink-0 transition-all duration-300 relative ${
+            isDockCollapsed
+              ? "w-0 overflow-hidden border-none"
+              : "w-full md:w-[380px] lg:w-[420px]"
+          }`}
+        >
+          {/* Top Search Field Embedded in Dock */}
+          <div className="p-3 border-b border-border bg-surface shrink-0 flex items-center gap-2">
+            <div className="flex-1">
+              <GlobalSearch
+                onSelectPlace={(place) => {
+                  setSelectedPlace(place);
+                  if (mapInstanceRef.current) {
+                    mapInstanceRef.current.flyTo({
+                      center: [place.longitude, place.latitude],
+                      zoom: 15,
+                    });
+                  }
+                }}
+                onDirectionsTo={(place) => {
+                  setSelectedPlace(place);
+                  setActiveMode("explore");
+                }}
+                onSavePlace={(p) => {
+                  const sp: SavedPlace = {
+                    id: `saved-${Date.now()}`,
+                    userId: "guest",
+                    label: p.name,
+                    placeName: p.fullAddress,
+                    latitude: p.latitude,
+                    longitude: p.longitude,
+                    createdAt: new Date().toISOString(),
+                  };
+                  setSavedPlaces((prev) => [sp, ...prev]);
+                  setActiveMode("saved");
+                }}
+                currentCenterLonLat={[viewport.center.longitude, viewport.center.latitude]}
+              />
+            </div>
+
+            {/* Collapse Dock Button (Desktop) */}
+            <button
+              onClick={() => setIsDockCollapsed(true)}
+              title="Collapse sidebar (Expand map)"
+              className="hidden md:flex p-2 rounded-xl bg-surface-secondary hover:bg-surface border border-border text-text-muted hover:text-text-primary transition-colors shrink-0"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Dock Content Area with Smooth Independent Scrolling */}
+          <div className="flex-1 overflow-y-auto">
+            {/* A. Plan Mode / New User Hero Card */}
+            {activeMode === "plan" && !activeMeetup && (
+              <HeroWelcomeCard
+                onPlanMeetup={() => setIsPlanModalOpen(true)}
+                onJoinMeetup={() => setIsJoinModalOpen(true)}
+                onExploreNearby={() => setActiveMode("explore")}
+                onFastTrackHyderabad={handleLoadHyderabadPreset}
+                recentMeetupTitle={allMeetups[0]?.title}
+                onOpenRecentMeetup={() => {
+                  setActiveMeetup(allMeetups[0]);
+                  setActiveMode("active_meetup");
+                }}
+              />
+            )}
+
+            {/* B. Active Meetup Cockpit (People | Places | Votes Tabs) */}
+            {(activeMode === "active_meetup" || (activeMode === "plan" && activeMeetup)) && activeMeetup && (
+              <MeetupWorkspace
+                meetup={activeMeetup}
+                onUpdateMeetup={(updated) => setActiveMeetup(updated)}
+                onSelectVenueOnMap={(v) => {
+                  if (mapInstanceRef.current) {
+                    mapInstanceRef.current.flyTo({
+                      center: [v.longitude, v.latitude],
+                      zoom: 15,
+                      duration: 800,
+                    });
+                  }
+                }}
+                onDisplayDirections={(routes) => setMultiRoutes(routes)}
+                onClose={() => {
+                  setActiveMeetup(null);
+                  setActiveMode("plan");
+                }}
+              />
+            )}
+
+            {/* C. My Meetups List */}
+            {activeMode === "my_meetups" && (
+              <MyMeetupsList
+                meetups={allMeetups}
+                onSelectMeetup={(m) => {
+                  setActiveMeetup(m);
+                  setActiveMode("active_meetup");
+                }}
+                onPlanNew={() => setIsPlanModalOpen(true)}
+                onClose={() => setActiveMode("plan")}
+              />
+            )}
+
+            {/* D. Explore Nearby Places */}
+            {activeMode === "explore" && (
+              <DiscoverPlacesPanel
+                onSelectVenue={(v) => {
+                  setSelectedPlace({
+                    id: v.venueId,
+                    name: v.name,
+                    fullAddress: v.address,
+                    latitude: v.latitude,
+                    longitude: v.longitude,
+                    provider: "maptiler",
+                  });
+                  if (mapInstanceRef.current) {
+                    mapInstanceRef.current.flyTo({
+                      center: [v.longitude, v.latitude],
+                      zoom: 15,
+                    });
+                  }
+                }}
+                onClose={() => setActiveMode("plan")}
+                currentCenter={viewport.center}
+              />
+            )}
+
+            {/* E. Saved Places */}
+            {activeMode === "saved" && (
+              <SavedPlacesPanel
+                savedPlaces={savedPlaces}
+                onSelectPlace={(p) => {
+                  if (mapInstanceRef.current) {
+                    mapInstanceRef.current.flyTo({
+                      center: [p.longitude, p.latitude],
+                      zoom: 15,
+                    });
+                  }
+                }}
+                onDeletePlace={(id) => setSavedPlaces((prev) => prev.filter((p) => p.id !== id))}
+                onClose={() => setActiveMode("plan")}
+              />
+            )}
+          </div>
+        </aside>
+
+        {/* Right Column: Full-Bleed Vector Map Canvas */}
+        <div className="flex-1 h-full relative overflow-hidden">
+          {/* Floating Expand Button (Visible when Dock is Collapsed on Desktop) */}
+          {isDockCollapsed && (
+            <button
+              onClick={() => setIsDockCollapsed(false)}
+              title="Show results panel"
+              className="hidden md:flex absolute top-4 left-4 z-20 items-center gap-1.5 px-3 py-2 rounded-xl bg-surface/95 backdrop-blur-md border border-border shadow-card text-xs font-bold text-text-primary hover:text-primary transition-all active:scale-95"
+            >
+              <PanelLeftOpen className="w-4 h-4 text-primary" />
+              <span>Show Results</span>
+            </button>
+          )}
+
+          {/* MapLibre GL Vector Map */}
           <DynamicMapContainer
             mapStyleType={mapStyleType}
             networkMode={false}
@@ -243,161 +415,38 @@ export default function GeorynthApp() {
               mapInstanceRef.current = map;
             }}
           />
-        </div>
 
-        {/* Top Floating Search Bar */}
-        <div className="absolute top-4 left-4 right-4 md:left-6 md:right-auto md:w-96 z-20">
-          <GlobalSearch
-            onSelectPlace={(place) => {
-              setSelectedPlace(place);
-              if (mapInstanceRef.current) {
-                mapInstanceRef.current.flyTo({
-                  center: [place.longitude, place.latitude],
-                  zoom: 14,
-                });
-              }
-            }}
-            onDirectionsTo={(place) => {
-              setSelectedPlace(place);
-              setActiveMode("explore");
-            }}
-            onSavePlace={(p) => {
-              const sp: SavedPlace = {
-                id: `saved-${Date.now()}`,
-                userId: "guest",
-                label: p.name,
-                placeName: p.fullAddress,
-                latitude: p.latitude,
-                longitude: p.longitude,
-                createdAt: new Date().toISOString(),
-              };
-              setSavedPlaces((prev) => [sp, ...prev]);
-              setActiveMode("saved");
-            }}
-            currentCenterLonLat={[viewport.center.longitude, viewport.center.latitude]}
-          />
-        </div>
-
-        {/* Left Side: Contextual Workspace Panels */}
-        <div className="absolute top-20 left-4 md:left-6 z-20 flex flex-col gap-3 max-h-[calc(100vh-160px)]">
-          {/* A. Plan Mode / New User Hero Card */}
-          {activeMode === "plan" && !activeMeetup && (
-            <HeroWelcomeCard
-              onPlanMeetup={() => setIsPlanModalOpen(true)}
-              onJoinMeetup={() => setIsJoinModalOpen(true)}
-              onExploreNearby={() => setActiveMode("explore")}
-              onFastTrackHyderabad={handleLoadHyderabadPreset}
-              recentMeetupTitle={allMeetups[0]?.title}
-              onOpenRecentMeetup={() => {
-                setActiveMeetup(allMeetups[0]);
-                setActiveMode("active_meetup");
-              }}
+          {/* Bottom Left: Map Style Switcher (Streets / Satellite / Night) */}
+          <div className="absolute bottom-6 left-4 z-20 hidden sm:block">
+            <StyleSwitcher
+              currentStyle={mapStyleType}
+              onSelectStyle={(s) => setMapStyleType(s)}
             />
-          )}
+          </div>
 
-          {/* B. Active Meetup Cockpit */}
-          {(activeMode === "active_meetup" || (activeMode === "plan" && activeMeetup)) && activeMeetup && (
-            <MeetupWorkspace
-              meetup={activeMeetup}
-              onUpdateMeetup={(updated) => setActiveMeetup(updated)}
-              onSelectVenueOnMap={(v) => {
-                if (mapInstanceRef.current) {
-                  mapInstanceRef.current.flyTo({
-                    center: [v.longitude, v.latitude],
-                    zoom: 15,
-                  });
-                }
-              }}
-              onDisplayDirections={(routes) => setMultiRoutes(routes)}
-              onClose={() => {
-                setActiveMeetup(null);
-                setActiveMode("plan");
-              }}
+          {/* Bottom Right: Unified Map Controls */}
+          <div className="absolute bottom-6 right-4 z-20">
+            <MapControls
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              onResetNorth={handleResetNorth}
+              onResetCenter={handleResetCenter}
+              onLocateUser={handleLocateUser}
+              geolocationStatus={geoStatus}
+              isFullscreen={isFullscreen}
+              onToggleFullscreen={handleToggleFullscreen}
             />
-          )}
-
-          {/* C. My Meetups Drawer */}
-          {activeMode === "my_meetups" && (
-            <MyMeetupsList
-              meetups={allMeetups}
-              onSelectMeetup={(m) => {
-                setActiveMeetup(m);
-                setActiveMode("active_meetup");
-              }}
-              onPlanNew={() => setIsPlanModalOpen(true)}
-              onClose={() => setActiveMode("plan")}
-            />
-          )}
-
-          {/* D. Explore Nearby Panel */}
-          {activeMode === "explore" && (
-            <DiscoverPlacesPanel
-              onSelectVenue={(v) => {
-                setSelectedPlace({
-                  id: v.venueId,
-                  name: v.name,
-                  fullAddress: v.address,
-                  latitude: v.latitude,
-                  longitude: v.longitude,
-                  provider: "maptiler",
-                });
-                if (mapInstanceRef.current) {
-                  mapInstanceRef.current.flyTo({
-                    center: [v.longitude, v.latitude],
-                    zoom: 15,
-                  });
-                }
-              }}
-              onClose={() => setActiveMode("plan")}
-              currentCenter={viewport.center}
-            />
-          )}
-
-          {/* E. Saved Places Drawer */}
-          {activeMode === "saved" && (
-            <SavedPlacesPanel
-              savedPlaces={savedPlaces}
-              onSelectPlace={(p) => {
-                if (mapInstanceRef.current) {
-                  mapInstanceRef.current.flyTo({
-                    center: [p.longitude, p.latitude],
-                    zoom: 15,
-                  });
-                }
-              }}
-              onDeletePlace={(id) => setSavedPlaces((prev) => prev.filter((p) => p.id !== id))}
-              onClose={() => setActiveMode("plan")}
-            />
-          )}
-        </div>
-
-        {/* Bottom Left: Map Style Switcher (Street / Satellite / Night) */}
-        <div className="absolute bottom-6 left-4 z-20 hidden sm:block">
-          <StyleSwitcher
-            currentStyle={mapStyleType}
-            onSelectStyle={(s) => setMapStyleType(s)}
-          />
-        </div>
-
-        {/* Bottom Right: Unified Map Controls */}
-        <div className="absolute bottom-6 right-4 z-20">
-          <MapControls
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onResetNorth={handleResetNorth}
-            onResetCenter={handleResetCenter}
-            onLocateUser={handleLocateUser}
-            geolocationStatus={geoStatus}
-            isFullscreen={isFullscreen}
-            onToggleFullscreen={handleToggleFullscreen}
-          />
+          </div>
         </div>
       </main>
 
       {/* 3. Mobile Bottom Tab Bar (sm screens only) */}
       <MobileTabBar
         activeMode={activeMode}
-        onChangeMode={(mode) => setActiveMode(mode)}
+        onChangeMode={(mode) => {
+          setActiveMode(mode);
+          setIsDockCollapsed(false);
+        }}
         onOpenPlanModal={() => setIsPlanModalOpen(true)}
         meetupCount={allMeetups.length}
       />
@@ -410,6 +459,7 @@ export default function GeorynthApp() {
           setActiveMeetup(m);
           setAllMeetups((prev) => [m, ...prev]);
           setActiveMode("active_meetup");
+          setIsDockCollapsed(false);
         }}
         onLoadHyderabadPreset={handleLoadHyderabadPreset}
       />
@@ -422,6 +472,7 @@ export default function GeorynthApp() {
           setActiveMeetup(m);
           setAllMeetups((prev) => [m, ...prev]);
           setActiveMode("active_meetup");
+          setIsDockCollapsed(false);
         }}
         userLocation={userCoords}
         onRequestUserLocation={requestLocation}

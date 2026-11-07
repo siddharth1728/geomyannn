@@ -18,7 +18,7 @@ export function MyMeetupsList({
   onClose,
 }: MyMeetupsListProps) {
   return (
-    <div className="w-full max-w-sm bg-surface border border-border rounded-2xl shadow-card p-4 flex flex-col gap-3 max-h-[80vh] overflow-y-auto animate-in fade-in transition-colors">
+    <div className="w-full h-full p-4 flex flex-col gap-3 overflow-y-auto animate-in fade-in transition-colors">
       <div className="flex items-center justify-between border-b border-border pb-2.5">
         <div className="flex items-center gap-2">
           <Users className="w-4 h-4 text-primary" />

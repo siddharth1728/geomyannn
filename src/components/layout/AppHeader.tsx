@@ -10,7 +10,6 @@ interface AppHeaderProps {
   onChangeMode: (mode: ActiveMode) => void;
   onOpenPlanModal: () => void;
   onOpenSettings: () => void;
-  activeMeetupTitle?: string;
   meetupCount?: number;
 }
 
@@ -19,13 +18,11 @@ export function AppHeader({
   onChangeMode,
   onOpenPlanModal,
   onOpenSettings,
-  activeMeetupTitle,
   meetupCount = 0,
 }: AppHeaderProps) {
   const navItems: { id: ActiveMode; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: "plan", label: "Plan", icon: Compass },
-    { id: "my_meetups", label: "My Meetups", icon: Users },
     { id: "explore", label: "Explore", icon: MapPin },
+    { id: "my_meetups", label: "Meetups", icon: Users },
     { id: "saved", label: "Saved", icon: Bookmark },
   ];
 
@@ -34,10 +31,10 @@ export function AppHeader({
       {/* Left: Brand Identity */}
       <div className="flex items-center gap-3">
         <div
-          onClick={() => onChangeMode("plan")}
+          onClick={() => onChangeMode("explore")}
           className="flex items-center gap-2.5 cursor-pointer group"
         >
-          <div className="w-8 h-8 rounded-lg bg-primary-soft text-primary flex items-center justify-center font-bold text-base shadow-subtle group-hover:scale-105 transition-transform">
+          <div className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center font-black text-base shadow-subtle group-hover:scale-105 transition-transform">
             G
           </div>
           <div>
@@ -45,50 +42,36 @@ export function AppHeader({
               <span className="font-extrabold text-base tracking-tight text-text-primary">
                 GEORYNTH
               </span>
-              <span className="hidden lg:inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide bg-primary-soft text-primary">
+              <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide bg-primary-soft text-primary">
                 MEETUP PLATFORM
               </span>
             </div>
-            <p className="text-[11px] text-text-muted hidden md:block -mt-0.5">
-              Find a place everyone can reach
-            </p>
           </div>
         </div>
-
-        {/* Active Meetup Pill (if any) */}
-        {activeMeetupTitle && (
-          <div className="hidden xl:flex items-center gap-2 ml-4 px-3 py-1 rounded-full bg-surface-secondary border border-border text-xs">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            <span className="font-medium text-text-secondary">Active:</span>
-            <span className="font-semibold text-text-primary max-w-[180px] truncate">
-              {activeMeetupTitle}
-            </span>
-          </div>
-        )}
       </div>
 
-      {/* Center: 4 Primary Tabs (Desktop) */}
+      {/* Center: Primary Navigation (Explore | Meetups | Saved) */}
       <nav className="hidden md:flex items-center gap-1 bg-surface-secondary p-1 rounded-xl border border-border">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive =
             activeMode === item.id ||
-            (item.id === "plan" && activeMode === "active_meetup");
+            (item.id === "my_meetups" && (activeMode === "active_meetup" || activeMode === "plan"));
 
           return (
             <button
               key={item.id}
               onClick={() => onChangeMode(item.id)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 isActive
-                  ? "bg-surface text-primary font-bold shadow-subtle"
+                  ? "bg-surface text-primary shadow-subtle"
                   : "text-text-secondary hover:text-text-primary hover:bg-surface/50"
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
               <span>{item.label}</span>
               {item.id === "my_meetups" && meetupCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-primary text-white font-bold">
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-primary-soft text-primary">
                   {meetupCount}
                 </span>
               )}
@@ -97,25 +80,21 @@ export function AppHeader({
         })}
       </nav>
 
-      {/* Right: Actions, Theme & Profile */}
+      {/* Right: Plan Meetup CTA & User Profile/Settings */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Quick Plan CTA Button */}
         <button
           onClick={onOpenPlanModal}
-          className="flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-subtle transition-all active:scale-95"
+          className="flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-subtle transition-all active:scale-95"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">Plan Meetup</span>
         </button>
 
-        {/* Adaptive Theme Toggle */}
-        <ThemeToggle />
-
-        {/* Settings / Profile Button */}
+        {/* User Avatar / Profile Settings Trigger */}
         <button
           onClick={onOpenSettings}
-          title="Profile & Settings"
-          className="w-8 h-8 rounded-lg bg-surface-secondary hover:bg-surface border border-border text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors"
+          title="Account & Settings"
+          className="w-8 h-8 rounded-xl bg-surface-secondary hover:bg-surface border border-border text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors shadow-subtle"
         >
           <Settings className="w-4 h-4" />
         </button>
