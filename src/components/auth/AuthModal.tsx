@@ -13,7 +13,11 @@ import {
   Sun, 
   Moon, 
   Monitor,
-  Check
+  Check,
+  HelpCircle,
+  Trash2,
+  MessageSquare,
+  AlertTriangle
 } from "lucide-react";
 import { ProviderStatus } from "@/types/geo";
 import { useTheme, ThemePreference } from "@/hooks/useTheme";
@@ -30,6 +34,10 @@ export function AuthModal({ isOpen, onClose, providerStatus }: AuthModalProps) {
   const [defaultTransport, setDefaultTransport] = useState<"car" | "bike" | "foot">("car");
   const [approximateLocation, setApproximateLocation] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
+  const [clearedNotice, setClearedNotice] = useState(false);
+  const [isReporting, setIsReporting] = useState(false);
+  const [reportText, setReportText] = useState("");
+  const [reportSuccess, setReportSuccess] = useState(false);
 
   if (!isOpen) return null;
 
@@ -169,7 +177,85 @@ export function AuthModal({ isOpen, onClose, providerStatus }: AuthModalProps) {
           </div>
         </div>
 
-        {/* 5. Connected Services Status */}
+        {/* 5. Support & Feedback */}
+        <div className="p-3.5 rounded-xl bg-surface-secondary border border-border space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <HelpCircle className="w-4 h-4 text-primary shrink-0" />
+              <div>
+                <p className="text-xs font-bold text-text-primary">Need Help or Found an Incorrect Place?</p>
+                <p className="text-[11px] text-text-muted">Report inaccuracies or request improvements</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsReporting(!isReporting)}
+              className="text-xs font-semibold text-primary hover:underline px-2 py-1 rounded-lg bg-surface border border-border"
+            >
+              {isReporting ? "Cancel" : "Report"}
+            </button>
+          </div>
+
+          {isReporting && (
+            <div className="pt-2 border-t border-border/70 space-y-2 animate-in fade-in">
+              {reportSuccess ? (
+                <div className="p-2.5 rounded-lg bg-primary-soft text-primary text-xs font-medium text-center">
+                  Report submitted. Thank you for making GEORYNTH better!
+                </div>
+              ) : (
+                <>
+                  <textarea
+                    rows={2}
+                    placeholder="Describe the place or issue (e.g. 'Coffee shop closed', 'Wrong road route')..."
+                    value={reportText}
+                    onChange={(e) => setReportText(e.target.value)}
+                    className="w-full p-2.5 rounded-lg bg-surface border border-border text-xs text-text-primary focus:outline-none focus:border-primary resize-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!reportText.trim()) return;
+                      setReportSuccess(true);
+                      setTimeout(() => {
+                        setReportSuccess(false);
+                        setIsReporting(false);
+                        setReportText("");
+                      }, 1800);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold shadow-subtle hover:bg-primary-hover"
+                  >
+                    Submit Report
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 6. Data & Privacy Reset */}
+        <div className="p-3.5 rounded-xl bg-surface-secondary border border-border flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-text-primary">Local Storage & Cache</p>
+            <p className="text-[11px] text-text-muted">Clear saved places and reset app state</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                localStorage.removeItem("georynth_saved_places");
+                localStorage.removeItem("georynth_theme");
+              } catch (e) {}
+              setClearedNotice(true);
+              setTimeout(() => setClearedNotice(false), 2000);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface hover:bg-red-500/10 border border-border hover:border-red-500/30 text-text-secondary hover:text-red-600 text-xs font-semibold transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>{clearedNotice ? "Cleared!" : "Reset Storage"}</span>
+          </button>
+        </div>
+
+        {/* 7. Connected Services Status */}
         <div className="space-y-2">
           <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
             Connected Services

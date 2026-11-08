@@ -37,6 +37,7 @@ import {
 } from "@/types/meetup";
 import { formatDuration, formatDistance } from "@/lib/utils/formatters";
 import { RouteResult } from "@/types/geo";
+import { rankVenues } from "@/lib/providers/matrix";
 
 interface MeetupWorkspaceProps {
   meetup: Meetup;
@@ -206,16 +207,16 @@ export function MeetupWorkspace({
     (v) => v.venueId === meetup.confirmedVenueId || v.id === meetup.confirmedVenueId
   );
 
-  // Sort venues based on ranking mode
-  const sortedVenues = [...meetup.venues].sort((a, b) => {
-    if (rankingMode === "fairest") {
-      return (a.disparitySec || 0) - (b.disparitySec || 0);
-    }
-    if (rankingMode === "quickest") {
-      return (a.totalDurationSec || 0) - (b.totalDurationSec || 0);
-    }
-    return (b.rating || 4.0) - (a.rating || 4.0);
-  });
+  // Post-Meetup Feedback State
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState<number>(5);
+  const [feedbackAccuracy, setFeedbackAccuracy] = useState<string>("accurate");
+  const [feedbackSuitability, setFeedbackSuitability] = useState<string>("great");
+  const [feedbackNote, setFeedbackNote] = useState<string>("");
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState<boolean>(false);
+
+  // Sort venues based on ranking mode & user preferences
+  const sortedVenues = rankVenues(meetup.venues, rankingMode, meetup.preferences);
 
   return (
     <div className="w-full h-full bg-surface flex flex-col transition-colors">
@@ -309,8 +310,8 @@ export function MeetupWorkspace({
 
       {/* 3. Confirmed Venue Banner (Sticky if confirmed) */}
       {confirmedVenue && (
-        <div className="mx-3 mt-3 p-3 rounded-xl bg-primary-soft border border-primary/30 shrink-0">
-          <div className="flex items-center justify-between">
+        <div className="mx-3 mt-3 space-y-2 shrink-0">
+          <div className="p-3 rounded-xl bg-primary-soft border border-primary/30 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
               <div>
@@ -318,16 +319,183 @@ export function MeetupWorkspace({
                 <p className="text-xs text-text-primary font-semibold">{confirmedVenue.name}</p>
               </div>
             </div>
-            <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${confirmedVenue.latitude},${confirmedVenue.longitude}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-[11px] font-bold text-primary bg-surface px-2.5 py-1 rounded-lg shadow-subtle hover:underline"
-            >
-              <span>Maps</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setFeedbackOpen(!feedbackOpen)}
+                className="flex items-center gap-1 text-[11px] font-bold text-primary bg-surface px-2.5 py-1 rounded-lg border border-primary/20 hover:border-primary shadow-subtle transition-all"
+              >
+                <Star className="w-3 h-3 fill-primary" />
+                <span>{feedbackSubmitted ? "Feedback Saved" : "How was it?"}</span>
+              </button>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${confirmedVenue.latitude},${confirmedVenue.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-[11px] font-bold text-text-secondary bg-surface px-2.5 py-1 rounded-lg border border-border shadow-subtle hover:text-text-primary hover:underline"
+              >
+                <span>Maps</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
           </div>
+
+          {/* Post-Meetup Feedback Card */}
+          {feedbackOpen && (
+            <div className="p-3.5 rounded-xl bg-surface border border-border shadow-subtle space-y-3 animate-in fade-in">
+              <div className="flex items-center justify-between border-b border-border/70 pb-2">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-xs font-bold text-text-primary">How did the meetup go?</span>
+                </div>
+                <button
+                  onClick={() => setFeedbackOpen(false)}
+                  className="text-text-muted hover:text-text-primary p-0.5"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {feedbackSubmitted ? (
+                <div className="p-3 rounded-lg bg-primary-soft/40 border border-primary/20 text-center space-y-1.5">
+                  <div className="flex items-center justify-center gap-1 text-primary">
+                    {Array.from({ length: feedbackRating }).map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-primary" />
+                    ))}
+                  </div>
+                  <p className="text-xs font-bold text-primary">Thanks for your feedback!</p>
+                  <p className="text-[11px] text-text-muted">
+                    Your real-world experience helps calibrate travel time estimates and group recommendations.
+                  </p>
+                  <button
+                    onClick={() => setFeedbackSubmitted(false)}
+                    className="text-[10px] text-primary underline font-medium pt-1"
+                  >
+                    Edit your review
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {/* Star Rating */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-text-muted mb-1">
+                      Overall Group Experience
+                    </label>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setFeedbackRating(star)}
+                          className="p-1 hover:scale-110 transition-transform"
+                        >
+                          <Star
+                            className={`w-5 h-5 ${
+                              star <= feedbackRating
+                                ? "text-amber-500 fill-amber-500"
+                                : "text-border hover:text-amber-400"
+                            }`}
+                          />
+                        </button>
+                      ))}
+                      <span className="ml-2 text-xs font-bold text-text-primary">
+                        {feedbackRating === 5 ? "Loved it!" : feedbackRating === 4 ? "Great" : feedbackRating === 3 ? "Okay" : "Could be better"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Travel Time Accuracy */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-text-muted mb-1">
+                      Travel Time Estimates
+                    </label>
+                    <div className="grid grid-cols-3 gap-1">
+                      {[
+                        { id: "accurate", label: "🎯 Spot-on" },
+                        { id: "slight_delay", label: "⏳ +5-10m delay" },
+                        { id: "heavy_delay", label: "🚦 Major traffic" },
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setFeedbackAccuracy(item.id)}
+                          className={`py-1.5 px-2 rounded-lg text-[10px] font-bold border transition-all ${
+                            feedbackAccuracy === item.id
+                              ? "bg-primary text-white border-primary"
+                              : "bg-surface-secondary text-text-secondary border-border hover:border-text-muted"
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Venue Suitability */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-text-muted mb-1">
+                      Venue Suitability for Group
+                    </label>
+                    <div className="grid grid-cols-3 gap-1">
+                      {[
+                        { id: "great", label: "✨ Perfect" },
+                        { id: "average", label: "👍 Decent" },
+                        { id: "crowded", label: "👥 Crowded" },
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setFeedbackSuitability(item.id)}
+                          className={`py-1.5 px-2 rounded-lg text-[10px] font-bold border transition-all ${
+                            feedbackSuitability === item.id
+                              ? "bg-primary text-white border-primary"
+                              : "bg-surface-secondary text-text-secondary border-border hover:border-text-muted"
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Optional Note */}
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Optional notes for next time..."
+                      value={feedbackNote}
+                      onChange={(e) => setFeedbackNote(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg bg-surface-secondary border border-border text-xs text-text-primary focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        localStorage.setItem(
+                          `georynth_feedback_${meetup.id}`,
+                          JSON.stringify({
+                            rating: feedbackRating,
+                            accuracy: feedbackAccuracy,
+                            suitability: feedbackSuitability,
+                            note: feedbackNote,
+                            submittedAt: new Date().toISOString(),
+                          })
+                        );
+                      } catch (e) {
+                        console.warn("Could not save feedback to localStorage", e);
+                      }
+                      setFeedbackSubmitted(true);
+                    }}
+                    className="w-full py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-subtle transition-all active:scale-95"
+                  >
+                    Submit Group Feedback
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

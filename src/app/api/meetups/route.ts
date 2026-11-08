@@ -23,6 +23,17 @@ const CreateMeetupSchema = z.object({
   plannedAt: z.string(),
   budget: z.enum(["budget", "moderate", "premium", "any"]).default("moderate"),
   transportMode: z.enum(["car", "bike", "foot"]).default("car"),
+  preferences: z
+    .object({
+      category: z.any(),
+      budget: z.any(),
+      cuisine: z.any().optional(),
+      dietary: z.any().optional(),
+      atmosphere: z.any().optional(),
+      maxTravelTimeMinutes: z.number().optional(),
+      strictMaxTravel: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export async function GET(request: NextRequest) {

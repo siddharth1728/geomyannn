@@ -111,6 +111,20 @@ export default function GeorynthApp() {
 
   // Initialize meetups and provider telemetry
   useEffect(() => {
+    // 1. Hydrate saved places from local storage if available
+    try {
+      const storedPlaces = localStorage.getItem("georynth_saved_places");
+      if (storedPlaces) {
+        const parsed = JSON.parse(storedPlaces);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSavedPlaces(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load saved places from localStorage", e);
+    }
+
+    // 2. Fetch remote provider telemetry and meetups
     async function init() {
       try {
         const [statusRes, meetupsRes] = await Promise.all([
@@ -140,6 +154,15 @@ export default function GeorynthApp() {
     }
     init();
   }, []);
+
+  // Sync saved places updates to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("georynth_saved_places", JSON.stringify(savedPlaces));
+    } catch (e) {
+      console.warn("Could not sync saved places to localStorage", e);
+    }
+  }, [savedPlaces]);
 
   // Map Controls Callbacks
   const handleZoomIn = () => {

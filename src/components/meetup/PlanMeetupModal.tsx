@@ -111,6 +111,15 @@ export function PlanMeetupModal({
           plannedAt,
           budget,
           transportMode,
+          preferences: {
+            category,
+            budget,
+            cuisine,
+            dietary,
+            atmosphere,
+            maxTravelTimeMinutes: maxTravelTime,
+            strictMaxTravel,
+          },
         }),
       });
 

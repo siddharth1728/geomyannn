@@ -75,7 +75,7 @@ export async function POST(
   }
 
   // 4. Rank candidate venues
-  const ranked = rankVenues(venues, rankingMode);
+  const ranked = rankVenues(venues, rankingMode, meetup.preferences);
 
   // 5. Update meetup store
   updateMeetupVenues(id, ranked);

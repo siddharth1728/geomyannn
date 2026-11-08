@@ -43,11 +43,11 @@ export type AtmospherePreference =
   | "work_friendly";
 
 export interface MeetupPreferences {
-  category: MeetupCategory;
-  budget: MeetupBudget;
-  cuisine: CuisinePreference;
-  dietary: DietaryRequirement;
-  atmosphere: AtmospherePreference;
+  category?: MeetupCategory;
+  budget?: MeetupBudget;
+  cuisine?: CuisinePreference;
+  dietary?: DietaryRequirement;
+  atmosphere?: AtmospherePreference;
   maxTravelTimeMinutes?: number;
   // Mandatory constraints vs soft preferences
   strictDietary?: boolean;

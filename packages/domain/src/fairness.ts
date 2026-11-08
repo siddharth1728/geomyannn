@@ -1,4 +1,4 @@
-import { CandidateVenue, ParticipantTravelTime, RankingMode } from "./types/meetup";
+import { CandidateVenue, ParticipantTravelTime, RankingMode, MeetupPreferences } from "./types/meetup";
 
 export interface FairnessMetrics {
   avgDurationSec: number;
@@ -48,7 +48,11 @@ export function computeFairnessMetrics(participantTimes: ParticipantTravelTime[]
   };
 }
 
-export function rankVenues(venues: CandidateVenue[], mode: RankingMode): CandidateVenue[] {
+export function rankVenues(
+  venues: CandidateVenue[],
+  mode: RankingMode,
+  preferences?: MeetupPreferences
+): CandidateVenue[] {
   const cloned = [...venues];
 
   switch (mode) {
@@ -66,12 +70,24 @@ export function rankVenues(venues: CandidateVenue[], mode: RankingMode): Candida
       return cloned.sort((a, b) => a.avgDurationSec - b.avgDurationSec);
 
     case "best_match":
-      // Balances customer rating with travel convenience
+      // Balances customer rating with travel convenience and budget constraints
       return cloned.sort((a, b) => {
         const ratingA = a.rating ?? 4.0;
         const ratingB = b.rating ?? 4.0;
-        const scoreA = ratingA * 10 - a.avgDurationSec / 120;
-        const scoreB = ratingB * 10 - b.avgDurationSec / 120;
+        let scoreA = ratingA * 10 - a.avgDurationSec / 120;
+        let scoreB = ratingB * 10 - b.avgDurationSec / 120;
+
+        if (preferences?.budget && preferences.budget !== "any") {
+          if (a.priceLevel === preferences.budget) scoreA += 5;
+          if (b.priceLevel === preferences.budget) scoreB += 5;
+        }
+
+        if (preferences?.maxTravelTimeMinutes) {
+          const maxSec = preferences.maxTravelTimeMinutes * 60;
+          if (a.maxDurationSec > maxSec) scoreA -= 8;
+          if (b.maxDurationSec > maxSec) scoreB -= 8;
+        }
+
         return scoreB - scoreA;
       });
 
