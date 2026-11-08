@@ -53,39 +53,66 @@ export function rankVenues(
   mode: RankingMode,
   preferences?: MeetupPreferences
 ): CandidateVenue[] {
+  if (!venues || venues.length === 0) return [];
   const cloned = [...venues];
 
   switch (mode) {
     case "fairest":
-      // Minimizes disparity between participants, then minimizes maximum travel time
+      // Minimax Fairness Strategy:
+      // 1. Primary: Lowest maximum individual travel time (protect the most burdened traveler)
+      // 2. Secondary: Lowest average group travel time (tie-breaker for group efficiency)
+      // 3. Tertiary: Lowest travel-time disparity (tie-breaker for balanced journeys)
       return cloned.sort((a, b) => {
-        if (a.disparitySec !== b.disparitySec) {
-          return a.disparitySec - b.disparitySec;
+        const maxA = a.maxDurationSec ?? Infinity;
+        const maxB = b.maxDurationSec ?? Infinity;
+        if (maxA !== maxB) {
+          return maxA - maxB;
         }
-        return a.maxDurationSec - b.maxDurationSec;
+
+        const avgA = a.avgDurationSec ?? Infinity;
+        const avgB = b.avgDurationSec ?? Infinity;
+        if (avgA !== avgB) {
+          return avgA - avgB;
+        }
+
+        const dispA = a.disparitySec ?? 0;
+        const dispB = b.disparitySec ?? 0;
+        return dispA - dispB;
       });
 
     case "quickest":
-      // Minimizes total/average group travel time
-      return cloned.sort((a, b) => a.avgDurationSec - b.avgDurationSec);
+      // Minimizes total/average group travel time across the network
+      return cloned.sort((a, b) => {
+        const avgA = a.avgDurationSec ?? Infinity;
+        const avgB = b.avgDurationSec ?? Infinity;
+        if (avgA !== avgB) return avgA - avgB;
+        return (a.maxDurationSec ?? Infinity) - (b.maxDurationSec ?? Infinity);
+      });
 
     case "best_match":
-      // Balances customer rating with travel convenience and budget constraints
+      // Multi-Attribute Utility Optimization:
+      // - Rating base: rating * 10 (contributes 10-50 pts; 10 pts = 1.0 star)
+      // - Travel efficiency: - (avgDurationSec / 120) (each 2 mins drive = -1 pt, 10 mins = -5 pts)
+      // - Budget alignment: +5 pts (equivalent to +0.5 star bonus for exact price tier match)
+      // - Max travel violation: -8 pts (equivalent to -0.8 star / 16-min penalty if someone's journey exceeds limit)
       return cloned.sort((a, b) => {
-        const ratingA = a.rating ?? 4.0;
-        const ratingB = b.rating ?? 4.0;
-        let scoreA = ratingA * 10 - a.avgDurationSec / 120;
-        let scoreB = ratingB * 10 - b.avgDurationSec / 120;
+        const ratingA = typeof a.rating === "number" && !isNaN(a.rating) ? a.rating : 4.0;
+        const ratingB = typeof b.rating === "number" && !isNaN(b.rating) ? b.rating : 4.0;
+        const avgSecA = a.avgDurationSec ?? 1800;
+        const avgSecB = b.avgDurationSec ?? 1800;
+
+        let scoreA = ratingA * 10 - avgSecA / 120;
+        let scoreB = ratingB * 10 - avgSecB / 120;
 
         if (preferences?.budget && preferences.budget !== "any") {
-          if (a.priceLevel === preferences.budget) scoreA += 5;
-          if (b.priceLevel === preferences.budget) scoreB += 5;
+          if (a.priceLevel && a.priceLevel === preferences.budget) scoreA += 5;
+          if (b.priceLevel && b.priceLevel === preferences.budget) scoreB += 5;
         }
 
-        if (preferences?.maxTravelTimeMinutes) {
-          const maxSec = preferences.maxTravelTimeMinutes * 60;
-          if (a.maxDurationSec > maxSec) scoreA -= 8;
-          if (b.maxDurationSec > maxSec) scoreB -= 8;
+        if (preferences?.maxTravelTimeMinutes && preferences.maxTravelTimeMinutes > 0) {
+          const maxAllowedSec = preferences.maxTravelTimeMinutes * 60;
+          if ((a.maxDurationSec ?? 0) > maxAllowedSec) scoreA -= 8;
+          if ((b.maxDurationSec ?? 0) > maxAllowedSec) scoreB -= 8;
         }
 
         return scoreB - scoreA;

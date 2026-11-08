@@ -116,6 +116,17 @@ export interface MeetupVote {
   createdAt: string;
 }
 
+export interface MeetupFeedback {
+  id: string;
+  meetupId: string;
+  memberId: string;
+  rating: number;
+  accuracy: "accurate" | "slight_delay" | "heavy_delay";
+  suitability: "great" | "average" | "crowded";
+  note?: string;
+  createdAt: string;
+}
+
 export interface Meetup {
   id: string;
   creatorId: string;
@@ -136,4 +147,5 @@ export interface Meetup {
   locations: ParticipantLocation[];
   venues: CandidateVenue[];
   votes: Record<string, string>; // memberId -> venueId
+  feedback?: MeetupFeedback[];
 }

@@ -35,9 +35,58 @@ export function AuthModal({ isOpen, onClose, providerStatus }: AuthModalProps) {
   const [approximateLocation, setApproximateLocation] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
   const [clearedNotice, setClearedNotice] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [isReporting, setIsReporting] = useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [reportText, setReportText] = useState("");
   const [reportSuccess, setReportSuccess] = useState(false);
+
+  const handleSubmitReport = async () => {
+    if (!reportText.trim()) return;
+    setIsSubmittingReport(true);
+    try {
+      const res = await fetch("/api/support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userName,
+          issueType: "inaccurate_place",
+          message: reportText.trim(),
+        }),
+      });
+      if (res.ok) {
+        setReportSuccess(true);
+        setTimeout(() => {
+          setReportSuccess(false);
+          setIsReporting(false);
+          setReportText("");
+        }, 2200);
+      }
+    } catch (e) {
+      console.warn("Report transmission failed:", e);
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
+  const handleConfirmReset = () => {
+    try {
+      localStorage.removeItem("georynth_saved_places");
+      localStorage.removeItem("georynth_theme");
+      // purge any cached post-meetup feedback keys
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("georynth_feedback_")) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch (e) {}
+    setShowResetConfirm(false);
+    setClearedNotice(true);
+    setTimeout(() => setClearedNotice(false), 2000);
+  };
 
   if (!isOpen) return null;
 
@@ -213,18 +262,11 @@ export function AuthModal({ isOpen, onClose, providerStatus }: AuthModalProps) {
                   />
                   <button
                     type="button"
-                    onClick={() => {
-                      if (!reportText.trim()) return;
-                      setReportSuccess(true);
-                      setTimeout(() => {
-                        setReportSuccess(false);
-                        setIsReporting(false);
-                        setReportText("");
-                      }, 1800);
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold shadow-subtle hover:bg-primary-hover"
+                    disabled={isSubmittingReport || !reportText.trim()}
+                    onClick={handleSubmitReport}
+                    className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold shadow-subtle hover:bg-primary-hover disabled:opacity-50"
                   >
-                    Submit Report
+                    {isSubmittingReport ? "Transmitting..." : "Submit Report to Backend"}
                   </button>
                 </>
               )}
@@ -232,27 +274,47 @@ export function AuthModal({ isOpen, onClose, providerStatus }: AuthModalProps) {
           )}
         </div>
 
-        {/* 6. Data & Privacy Reset */}
-        <div className="p-3.5 rounded-xl bg-surface-secondary border border-border flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold text-text-primary">Local Storage & Cache</p>
-            <p className="text-[11px] text-text-muted">Clear saved places and reset app state</p>
+        {/* 6. Data & Privacy Reset with Confirmation */}
+        <div className="p-3.5 rounded-xl bg-surface-secondary border border-border space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-text-primary">Local Storage & Cache</p>
+              <p className="text-[11px] text-text-muted">Clear browser bookmarks, reviews and preferences</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowResetConfirm(!showResetConfirm)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface hover:bg-red-500/10 border border-border hover:border-red-500/30 text-text-secondary hover:text-red-600 text-xs font-semibold transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{clearedNotice ? "Cleared!" : "Reset Storage"}</span>
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              try {
-                localStorage.removeItem("georynth_saved_places");
-                localStorage.removeItem("georynth_theme");
-              } catch (e) {}
-              setClearedNotice(true);
-              setTimeout(() => setClearedNotice(false), 2000);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface hover:bg-red-500/10 border border-border hover:border-red-500/30 text-text-secondary hover:text-red-600 text-xs font-semibold transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>{clearedNotice ? "Cleared!" : "Reset Storage"}</span>
-          </button>
+
+          {showResetConfirm && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs space-y-2 animate-in fade-in">
+              <p className="font-bold text-red-600">Are you sure you want to reset local storage?</p>
+              <p className="text-[11px] text-text-secondary leading-relaxed">
+                This will delete your bookmarked saved places and local reviews on this browser. Active meetups on the server are preserved. This action is not reversible.
+              </p>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleConfirmReset}
+                  className="px-3 py-1 rounded-lg bg-red-600 text-white font-bold text-xs shadow-subtle hover:bg-red-700"
+                >
+                  Yes, Clear Everything
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowResetConfirm(false)}
+                  className="px-3 py-1 rounded-lg bg-surface border border-border text-xs font-semibold text-text-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 7. Connected Services Status */}

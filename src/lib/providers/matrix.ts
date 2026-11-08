@@ -152,54 +152,8 @@ export async function calculateGroupTravelMatrix(
 
 /**
  * Sort venues according to user-selected recommendation mode:
- * 1. Fairest for Everyone
- * 2. Quickest Overall
- * 3. Best Group Match
+ * 1. Fairest for Everyone (Minimax individual travel, tie-breaker avg time & disparity)
+ * 2. Quickest Overall (Lowest total/average travel time)
+ * 3. Best Group Match (Utility optimization with budget bonuses & travel penalties)
  */
-export function rankVenues(
-  venues: CandidateVenue[],
-  mode: RankingMode,
-  preferences?: MeetupPreferences
-): CandidateVenue[] {
-  const cloned = [...venues];
-
-  switch (mode) {
-    case "fairest":
-      // Minimizes disparity between participants, then minimizes maximum travel time
-      return cloned.sort((a, b) => {
-        if (a.disparitySec !== b.disparitySec) {
-          return a.disparitySec - b.disparitySec;
-        }
-        return a.maxDurationSec - b.maxDurationSec;
-      });
-
-    case "quickest":
-      // Minimizes total/average group travel time
-      return cloned.sort((a, b) => a.avgDurationSec - b.avgDurationSec);
-
-    case "best_match":
-      // Balances customer rating, budget match, and travel time
-      return cloned.sort((a, b) => {
-        const ratingA = a.rating ?? 4.0;
-        const ratingB = b.rating ?? 4.0;
-        let scoreA = ratingA * 10 - a.avgDurationSec / 120;
-        let scoreB = ratingB * 10 - b.avgDurationSec / 120;
-
-        if (preferences?.budget && preferences.budget !== "any") {
-          if (a.priceLevel === preferences.budget) scoreA += 5;
-          if (b.priceLevel === preferences.budget) scoreB += 5;
-        }
-
-        if (preferences?.maxTravelTimeMinutes) {
-          const maxSec = preferences.maxTravelTimeMinutes * 60;
-          if (a.maxDurationSec > maxSec) scoreA -= 8;
-          if (b.maxDurationSec > maxSec) scoreB -= 8;
-        }
-
-        return scoreB - scoreA;
-      });
-
-    default:
-      return cloned;
-  }
-}
+export { rankVenues } from "@georynth/domain";

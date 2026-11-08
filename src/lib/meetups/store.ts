@@ -1,8 +1,13 @@
 import { Meetup, MeetupMember, ParticipantLocation, CandidateVenue } from "@/types/meetup";
 import { getSupabaseServerClient } from "../supabase/server";
 
-// In-memory persistent store for development & offline resilience
-const inMemoryMeetups: Map<string, Meetup> = new Map();
+// Global in-memory store so all Next.js API routes share the exact same instance across route boundaries
+const globalStore = globalThis as unknown as {
+  inMemoryMeetups?: Map<string, Meetup>;
+};
+
+export const inMemoryMeetups: Map<string, Meetup> =
+  globalStore.inMemoryMeetups ?? new Map<string, Meetup>();
 
 // Initialize flagship Hyderabad 4-origin demo
 function seedHyderabadDemo() {
@@ -129,7 +134,12 @@ function seedHyderabadDemo() {
   inMemoryMeetups.set(hydDemo.inviteCode, hydDemo);
 }
 
-seedHyderabadDemo();
+if (!globalStore.inMemoryMeetups) {
+  globalStore.inMemoryMeetups = inMemoryMeetups;
+  seedHyderabadDemo();
+} else if (!inMemoryMeetups.has("hyd-demo-1")) {
+  seedHyderabadDemo();
+}
 
 // Helper to generate a friendly 6-character alphanumeric invite code (e.g. HYD-782)
 export function generateInviteCode(): string {
@@ -308,4 +318,42 @@ export function confirmMeetupVenue(meetupId: string, venueId: string): boolean {
   meetup.confirmedVenueId = venueId;
   meetup.status = "confirmed";
   return true;
+}
+
+export function recordMeetupFeedback(
+  meetupId: string,
+  memberId: string,
+  feedbackData: {
+    rating: number;
+    accuracy: "accurate" | "slight_delay" | "heavy_delay";
+    suitability: "great" | "average" | "crowded";
+    note?: string;
+  }
+): any {
+  const meetup = inMemoryMeetups.get(meetupId);
+  if (!meetup) return null;
+
+  if (!meetup.feedback) {
+    meetup.feedback = [];
+  }
+
+  const existingIdx = meetup.feedback.findIndex((f) => f.memberId === memberId);
+  const fb = {
+    id: `fb-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    meetupId,
+    memberId,
+    rating: feedbackData.rating,
+    accuracy: feedbackData.accuracy,
+    suitability: feedbackData.suitability,
+    note: feedbackData.note,
+    createdAt: new Date().toISOString(),
+  };
+
+  if (existingIdx >= 0) {
+    meetup.feedback[existingIdx] = fb;
+  } else {
+    meetup.feedback.push(fb);
+  }
+
+  return fb;
 }

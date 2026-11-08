@@ -471,15 +471,38 @@ export function MeetupWorkspace({
                   {/* Submit Button */}
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
+                      const payload = {
+                        memberId: currentMemberId,
+                        rating: feedbackRating,
+                        accuracy: feedbackAccuracy,
+                        suitability: feedbackSuitability,
+                        note: feedbackNote,
+                      };
+
+                      // 1. Sync to backend API
+                      try {
+                        const res = await fetch(`/api/meetups/${meetup.id}/feedback`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify(payload),
+                        });
+                        if (res.ok) {
+                          const data = await res.json();
+                          if (data.meetup) {
+                            onUpdateMeetup(data.meetup);
+                          }
+                        }
+                      } catch (e) {
+                        console.warn("Backend feedback sync failed, falling back to local storage:", e);
+                      }
+
+                      // 2. Cache in localStorage for offline resilience
                       try {
                         localStorage.setItem(
                           `georynth_feedback_${meetup.id}`,
                           JSON.stringify({
-                            rating: feedbackRating,
-                            accuracy: feedbackAccuracy,
-                            suitability: feedbackSuitability,
-                            note: feedbackNote,
+                            ...payload,
                             submittedAt: new Date().toISOString(),
                           })
                         );
