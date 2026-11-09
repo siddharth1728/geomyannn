@@ -6,11 +6,10 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const maptilerConfigured = Boolean(
     process.env.MAPTILER_GEOCODING_KEY ||
-      process.env.NEXT_PUBLIC_MAPTILER_KEY ||
-      "gDCzA1avLA0udEVVgHhl"
+      process.env.NEXT_PUBLIC_MAPTILER_KEY
   );
   const graphhopperConfigured = Boolean(
-    process.env.GRAPHHOPPER_API_KEY || "6ebdeb32-4581-4b86-97f7-c187909e4a07"
+    process.env.GRAPHHOPPER_API_KEY
   );
   const supabaseConfigured = isServerSupabaseConfigured;
 

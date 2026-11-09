@@ -35,7 +35,7 @@ export async function calculateGroupTravelMatrix(
   profile: RoutingProfile = "car",
   meetupId: string = "meetup-default"
 ): Promise<{ venues: CandidateVenue[]; error?: string }> {
-  const apiKey = process.env.GRAPHHOPPER_API_KEY || "6ebdeb32-4581-4b86-97f7-c187909e4a07";
+  const apiKey = process.env.GRAPHHOPPER_API_KEY;
 
   if (!apiKey) {
     return {
@@ -86,9 +86,18 @@ export async function calculateGroupTravelMatrix(
 
     // Build candidate venues with real metrics & transparent explanations
     const computedVenues: CandidateVenue[] = destinations.map((dest, destIdx) => {
+      let isFullyRoutable = true;
       const participantTimes: ParticipantTravelTime[] = origins.map((orig, origIdx) => {
-        const durationSec = Math.round(times[origIdx]?.[destIdx] ?? 0);
-        const distanceMeters = Math.round(distances[origIdx]?.[destIdx] ?? 0);
+        const rawTime = times[origIdx]?.[destIdx];
+        const rawDist = distances[origIdx]?.[destIdx];
+
+        // Explicit null handling: never convert missing or unroutable journeys to 0 seconds!
+        if (rawTime === null || rawTime === undefined || rawDist === null || rawDist === undefined) {
+          isFullyRoutable = false;
+        }
+
+        const durationSec = rawTime !== null && rawTime !== undefined ? Math.round(rawTime) : 999999;
+        const distanceMeters = rawDist !== null && rawDist !== undefined ? Math.round(rawDist) : 999999;
 
         return {
           memberId: orig.memberId,
@@ -99,22 +108,27 @@ export async function calculateGroupTravelMatrix(
         };
       });
 
-      const durations = participantTimes.map((pt) => pt.durationSeconds);
-      const totalDurationSec = durations.reduce((a, b) => a + b, 0);
-      const avgDurationSec = Math.round(totalDurationSec / (durations.length || 1));
-      const maxDurationSec = Math.max(...durations);
-      const minDurationSec = Math.min(...durations);
+      const validDurations = participantTimes
+        .map((pt) => pt.durationSeconds)
+        .filter((d) => d < 900000);
+
+      const totalDurationSec = validDurations.reduce((a, b) => a + b, 0);
+      const avgDurationSec = validDurations.length > 0 ? Math.round(totalDurationSec / validDurations.length) : 999999;
+      const maxDurationSec = validDurations.length > 0 ? Math.max(...validDurations) : 999999;
+      const minDurationSec = validDurations.length > 0 ? Math.min(...validDurations) : 999999;
       const disparitySec = maxDurationSec - minDurationSec;
       const disparityMin = Math.round(disparitySec / 60);
 
       // Transparent, plain-English explanation instead of an arbitrary score
       let recommendationReason = "";
-      if (disparityMin <= 10) {
+      if (!isFullyRoutable) {
+        recommendationReason = "Incomplete road network: journey unavailable or unroutable for one or more participants.";
+      } else if (disparityMin <= 10) {
         recommendationReason = `Exceptional fairness: only a ${disparityMin}-minute gap between closest and farthest friend.`;
       } else if (disparityMin <= 18) {
         recommendationReason = `Balanced central location with an average drive time of ${Math.round(avgDurationSec / 60)} minutes.`;
       } else {
-        recommendationReason = `Convenient for ${origins.find((_, i) => durations[i] === minDurationSec)?.memberName || "some members"}, but involves up to a ${Math.round(maxDurationSec / 60)}-minute trip.`;
+        recommendationReason = `Convenient for ${origins.find((_, i) => participantTimes[i]?.durationSeconds === minDurationSec)?.memberName || "some members"}, but involves up to a ${Math.round(maxDurationSec / 60)}-minute trip.`;
       }
 
       return {

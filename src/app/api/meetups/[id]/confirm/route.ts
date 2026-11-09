@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMeetupFromStore, confirmMeetupVenue } from "@/lib/meetups/store";
 import { calculateRoute } from "@/lib/providers/graphhopper";
+import { getSessionUser, isMeetupHost, isMeetupMember } from "@/lib/auth/session";
 import { RouteResult } from "@/types/geo";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,15 @@ export async function POST(
     return NextResponse.json({ error: "Meetup not found" }, { status: 404 });
   }
 
+  // Authorization check: User must be host or authorized member
+  const user = await getSessionUser(request);
+  if (!isMeetupHost(meetup, user.userId) && !isMeetupMember(meetup, user.userId)) {
+    return NextResponse.json(
+      { error: "Forbidden. Only authorized meetup host or members can confirm the venue." },
+      { status: 403 }
+    );
+  }
+
   const body = await request.json().catch(() => null);
   const venueId = body?.venueId;
 
@@ -41,55 +51,23 @@ export async function POST(
   const individualDirections: ConfirmedDirections[] = [];
 
   for (const loc of meetup.locations) {
-    let result = await calculateRoute(
+    const result = await calculateRoute(
       { latitude: loc.latitude, longitude: loc.longitude },
       { latitude: selectedVenue.latitude, longitude: selectedVenue.longitude },
       meetup.transportMode
     );
 
-    // If rate-limited, wait 350ms and retry once
-    if (!result.route && result.status === 429) {
-      await new Promise((r) => setTimeout(r, 400));
-      result = await calculateRoute(
-        { latitude: loc.latitude, longitude: loc.longitude },
-        { latitude: selectedVenue.latitude, longitude: selectedVenue.longitude },
-        meetup.transportMode
-      );
-    }
-
-    let routeToUse = result.route;
-
-    // Fallback line if GraphHopper quota is exhausted during high-frequency tests
-    if (!routeToUse) {
-      const matchPt = selectedVenue.participantTimes.find((pt) => pt.memberId === loc.memberId);
-      routeToUse = {
-        geometry: {
-          type: "LineString",
-          coordinates: [
-            [loc.longitude, loc.latitude],
-            [
-              loc.longitude + (selectedVenue.longitude - loc.longitude) * 0.5,
-              loc.latitude + (selectedVenue.latitude - loc.latitude) * 0.5,
-            ],
-            [selectedVenue.longitude, selectedVenue.latitude],
-          ],
-        },
-        distanceMeters: matchPt?.distanceMeters || 10000,
-        durationMilliseconds: (matchPt?.durationSeconds || 1200) * 1000,
-        profile: meetup.transportMode,
-        provider: "graphhopper",
-      };
-    }
-
+    // HONEST ROUTING POLICY: If GraphHopper route is unavailable or quota is exhausted,
+    // do NOT substitute a fake straight-line path claiming to be a real road calculation.
     individualDirections.push({
       memberId: loc.memberId,
       memberName: loc.memberName,
       originLabel: loc.label,
-      route: routeToUse,
+      route: result.route || null,
     });
 
-    // Gentle pacing between calls
-    await new Promise((r) => setTimeout(r, 150));
+    // Gentle pacing between external API calls
+    await new Promise((r) => setTimeout(r, 100));
   }
 
   return NextResponse.json({

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getMeetupFromStore, updateMeetupVenues } from "@/lib/meetups/store";
 import { searchCandidateVenues } from "@/lib/providers/venues";
 import { calculateGroupTravelMatrix, rankVenues } from "@/lib/providers/matrix";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { getSessionUser, isMeetupMember } from "@/lib/auth/session";
 import { RankingMode } from "@/types/meetup";
 
 export const dynamic = "force-dynamic";
@@ -10,11 +12,34 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Rate limiting to protect GraphHopper Matrix quota: 15 req / min per IP
+  const rateLimit = checkRateLimit(request, {
+    limit: 15,
+    windowMs: 60000,
+    prefix: "api_matrix",
+  });
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: `Too many matrix calculations. Please retry in ${rateLimit.resetSeconds} seconds.` },
+      { status: 429 }
+    );
+  }
+
   const { id } = await params;
   const meetup = getMeetupFromStore(id);
 
   if (!meetup) {
     return NextResponse.json({ error: "Meetup not found" }, { status: 404 });
+  }
+
+  // Authorization check: User must be an authorized member
+  const user = await getSessionUser(request);
+  if (!isMeetupMember(meetup, user.userId)) {
+    return NextResponse.json(
+      { error: "Forbidden. You must be a member of this meetup to calculate travel times." },
+      { status: 403 }
+    );
   }
 
   if (meetup.locations.length === 0) {

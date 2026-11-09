@@ -31,7 +31,7 @@ GEORYNTH follows a **Privacy-First Geographical Architecture**:
 ## 3. Remote Database Status & Advisory
 
 - **Current Architecture:** The backend features a dual-mode persistence architecture:
-  1. Primary: Remote Supabase database (`https://ppytdnhvvbmhaaurydza.supabase.co`).
+  1. Primary: Remote Supabase database (configured via `NEXT_PUBLIC_SUPABASE_URL`).
   2. Safe Fallback: Resilient in-memory store (`src/lib/store.ts`) that guarantees 100% web app uptime even if the remote database is unreachable or unmigrated.
 - **Production Advisory:** The remote Supabase instance has not yet had migrations executed (`schema cache missing public.community_reports`). While the app runs flawlessly using the fallback store, applying the SQL schema in `supabase/migrations/` is recommended prior to scaling to thousands of concurrent users.
 - **Row-Level Security (RLS):** Supabase migrations should tighten policies to restrict meetup modification to authenticated organizers once user authentication is required.

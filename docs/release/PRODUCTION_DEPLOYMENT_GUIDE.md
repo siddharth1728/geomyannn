@@ -71,7 +71,7 @@ To enable permanent PostgreSQL storage rather than the in-memory fallback:
 npm install -g supabase
 
 # Link your Supabase project
-supabase link --project-ref ppytdnhvvbmhaaurydza
+supabase link --project-ref <your-supabase-project-ref>
 
 # Apply migrations
 supabase db push

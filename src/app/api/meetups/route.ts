@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createMeetupInStore, getAllMeetups, getMeetupFromStore } from "@/lib/meetups/store";
+import { getSessionUser } from "@/lib/auth/session";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
 const CreateMeetupSchema = z.object({
-  creatorId: z.string().default("user-me"),
+  creatorId: z.string().optional(),
   creatorName: z.string().min(2, "Creator name must be at least 2 characters"),
   title: z.string().min(3, "Title must be at least 3 characters").max(120),
   category: z.enum([
@@ -25,8 +26,8 @@ const CreateMeetupSchema = z.object({
   transportMode: z.enum(["car", "bike", "foot"]).default("car"),
   preferences: z
     .object({
-      category: z.any(),
-      budget: z.any(),
+      category: z.any().optional(),
+      budget: z.any().optional(),
       cuisine: z.any().optional(),
       dietary: z.any().optional(),
       atmosphere: z.any().optional(),
@@ -80,8 +81,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Server-derived creator identity
+    const user = await getSessionUser(request);
+    const creatorId = user.isVerified ? user.userId : (validation.data.creatorId || user.userId);
+    const creatorName = (validation.data.creatorName || user.userName).trim();
+
     const meetup = await createMeetupInStore({
       ...validation.data,
+      creatorId,
+      creatorName,
       status: "draft",
     });
 

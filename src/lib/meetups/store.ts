@@ -134,11 +134,14 @@ function seedHyderabadDemo() {
   inMemoryMeetups.set(hydDemo.inviteCode, hydDemo);
 }
 
-if (!globalStore.inMemoryMeetups) {
-  globalStore.inMemoryMeetups = inMemoryMeetups;
-  seedHyderabadDemo();
-} else if (!inMemoryMeetups.has("hyd-demo-1")) {
-  seedHyderabadDemo();
+// Production demo suppression: Demonstration fixtures are only seeded in non-production environments
+if (process.env.NODE_ENV !== "production") {
+  if (!globalStore.inMemoryMeetups) {
+    globalStore.inMemoryMeetups = inMemoryMeetups;
+    seedHyderabadDemo();
+  } else if (!inMemoryMeetups.has("hyd-demo-1")) {
+    seedHyderabadDemo();
+  }
 }
 
 // Helper to generate a friendly 6-character alphanumeric invite code (e.g. HYD-782)
@@ -216,7 +219,110 @@ export async function createMeetupInStore(meetupData: Omit<Meetup, "id" | "invit
 }
 
 export function getMeetupFromStore(identifier: string): Meetup | null {
-  return inMemoryMeetups.get(identifier) || null;
+  // Check memory store (fast cache)
+  const cached = inMemoryMeetups.get(identifier);
+  if (cached) return cached;
+  return null;
+}
+
+export async function fetchMeetupByIdOrCode(identifier: string): Promise<Meetup | null> {
+  // Check memory store first
+  const cached = inMemoryMeetups.get(identifier);
+  if (cached) return cached;
+
+  const supabase = getSupabaseServerClient();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("meetups")
+        .select(`
+          id, creator_id, creator_name, title, category, description,
+          planned_at, budget, transport_mode, status, confirmed_venue_id,
+          invite_code, created_at, expires_at,
+          members:meetup_members(id, user_id, user_name, role, joined_at),
+          locations:meetup_locations(id, member_id, member_name, label, latitude, longitude, is_approximate, updated_at, expires_at),
+          venues:meetup_venues(id, venue_id, name, category, address, latitude, longitude, rating, price_level, avg_duration_sec, max_duration_sec, min_duration_sec, disparity_sec, participant_times),
+          votes:meetup_votes(member_id, venue_id)
+        `)
+        .or(`id.eq.${identifier},invite_code.eq.${identifier}`)
+        .maybeSingle();
+
+      if (data && !error) {
+        const votesObj: Record<string, string> = {};
+        if (Array.isArray(data.votes)) {
+          data.votes.forEach((v: any) => {
+            if (v.member_id && v.venue_id) votesObj[v.member_id] = v.venue_id;
+          });
+        }
+
+        const loadedMeetup: Meetup = {
+          id: data.id,
+          creatorId: data.creator_id,
+          creatorName: data.creator_name,
+          title: data.title,
+          category: data.category,
+          description: data.description,
+          plannedAt: data.planned_at,
+          budget: data.budget,
+          transportMode: data.transport_mode,
+          status: data.status,
+          confirmedVenueId: data.confirmed_venue_id,
+          inviteCode: data.invite_code,
+          createdAt: data.created_at,
+          expiresAt: data.expires_at,
+          members: (data.members || []).map((m: any) => ({
+            id: m.id,
+            meetupId: data.id,
+            userId: m.user_id,
+            userName: m.user_name,
+            role: m.role,
+            joinedAt: m.joined_at,
+          })),
+          locations: (data.locations || []).map((l: any) => ({
+            id: l.id,
+            meetupId: data.id,
+            memberId: l.member_id,
+            memberName: l.member_name,
+            label: l.label,
+            latitude: l.latitude,
+            longitude: l.longitude,
+            isApproximate: l.is_approximate,
+            updatedAt: l.updated_at,
+            expiresAt: l.expires_at,
+          })),
+          venues: (data.venues || []).map((v: any) => ({
+            id: v.id,
+            meetupId: data.id,
+            venueId: v.venue_id,
+            name: v.name,
+            category: v.category,
+            address: v.address,
+            latitude: v.latitude,
+            longitude: v.longitude,
+            rating: v.rating,
+            priceLevel: v.price_level,
+            avgDurationSec: v.avg_duration_sec,
+            maxDurationSec: v.max_duration_sec,
+            minDurationSec: v.min_duration_sec,
+            disparitySec: v.disparity_sec,
+            totalDurationSec: v.avg_duration_sec,
+            recommendationReason: "",
+            participantTimes: v.participant_times || [],
+            voteCount: 0,
+          })),
+          votes: votesObj,
+        };
+
+        inMemoryMeetups.set(loadedMeetup.id, loadedMeetup);
+        inMemoryMeetups.set(loadedMeetup.inviteCode, loadedMeetup);
+        return loadedMeetup;
+      }
+    } catch (e) {
+      console.warn("Supabase query error in fetchMeetupByIdOrCode:", e);
+    }
+  }
+
+  return null;
 }
 
 export function getAllMeetups(): Meetup[] {
@@ -243,6 +349,23 @@ export function addMemberToMeetup(meetupId: string, userId: string, userName: st
   };
 
   meetup.members.push(member);
+
+  const supabase = getSupabaseServerClient();
+  if (supabase) {
+    Promise.resolve(
+      supabase.from("meetup_members").insert({
+        meetup_id: meetupId,
+        user_id: userId,
+        user_name: userName,
+        role: "member",
+      })
+    )
+      .then((res: any) => {
+        if (res?.error) console.warn("Supabase member sync error:", res.error.message);
+      })
+      .catch((err: any) => console.warn("Supabase member sync error:", err));
+  }
+
   return member;
 }
 
@@ -280,6 +403,32 @@ export function setParticipantLocation(
     meetup.locations.push(loc);
   }
 
+  const supabase = getSupabaseServerClient();
+  if (supabase) {
+    Promise.resolve(
+      supabase
+        .from("meetup_locations")
+        .upsert(
+          {
+            meetup_id: meetupId,
+            member_id: memberId,
+            member_name: memberName,
+            label,
+            latitude,
+            longitude,
+            is_approximate: isApproximate,
+            updated_at: loc.updatedAt,
+            expires_at: loc.expiresAt,
+          },
+          { onConflict: "meetup_id,member_id" }
+        )
+    )
+      .then((res: any) => {
+        if (res?.error) console.warn("Supabase location upsert error:", res.error.message);
+      })
+      .catch((err: any) => console.warn("Supabase location upsert error:", err));
+  }
+
   return loc;
 }
 
@@ -289,6 +438,19 @@ export function updateMeetupVenues(meetupId: string, venues: CandidateVenue[]): 
 
   meetup.venues = venues;
   meetup.status = "voting";
+
+  const supabase = getSupabaseServerClient();
+  if (supabase) {
+    Promise.resolve(
+      supabase
+        .from("meetups")
+        .update({ status: "voting" })
+        .eq("id", meetupId)
+    )
+      .then(() => {})
+      .catch((err: any) => console.warn("Supabase update error:", err));
+  }
+
   return true;
 }
 
@@ -308,6 +470,26 @@ export function recordVote(meetupId: string, memberId: string, venueId: string):
     v.voteCount = voteCounts[v.venueId] || 0;
   });
 
+  const supabase = getSupabaseServerClient();
+  if (supabase) {
+    Promise.resolve(
+      supabase
+        .from("meetup_votes")
+        .upsert(
+          {
+            meetup_id: meetupId,
+            member_id: memberId,
+            venue_id: venueId,
+          },
+          { onConflict: "meetup_id,member_id" }
+        )
+    )
+      .then((res: any) => {
+        if (res?.error) console.warn("Supabase vote sync error:", res.error.message);
+      })
+      .catch((err: any) => console.warn("Supabase vote sync error:", err));
+  }
+
   return true;
 }
 
@@ -317,6 +499,24 @@ export function confirmMeetupVenue(meetupId: string, venueId: string): boolean {
 
   meetup.confirmedVenueId = venueId;
   meetup.status = "confirmed";
+
+  const supabase = getSupabaseServerClient();
+  if (supabase) {
+    Promise.resolve(
+      supabase
+        .from("meetups")
+        .update({
+          confirmed_venue_id: venueId,
+          status: "confirmed",
+        })
+        .eq("id", meetupId)
+    )
+      .then((res: any) => {
+        if (res?.error) console.warn("Supabase confirm sync error:", res.error.message);
+      })
+      .catch((err: any) => console.warn("Supabase confirm sync error:", err));
+  }
+
   return true;
 }
 
@@ -353,6 +553,29 @@ export function recordMeetupFeedback(
     meetup.feedback[existingIdx] = fb;
   } else {
     meetup.feedback.push(fb);
+  }
+
+  const supabase = getSupabaseServerClient();
+  if (supabase) {
+    Promise.resolve(
+      supabase
+        .from("meetup_feedback")
+        .upsert(
+          {
+            meetup_id: meetupId,
+            member_id: memberId,
+            rating: feedbackData.rating,
+            accuracy: feedbackData.accuracy,
+            suitability: feedbackData.suitability,
+            note: feedbackData.note || null,
+          },
+          { onConflict: "meetup_id,member_id" }
+        )
+    )
+      .then((res: any) => {
+        if (res?.error) console.warn("Supabase feedback sync error:", res.error.message);
+      })
+      .catch((err: any) => console.warn("Supabase feedback sync error:", err));
   }
 
   return fb;

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMeetupFromStore, recordMeetupFeedback } from "@/lib/meetups/store";
+import { getSessionUser, isMeetupMember } from "@/lib/auth/session";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
 const FeedbackSchema = z.object({
-  memberId: z.string().min(1, "Member ID is required"),
+  memberId: z.string().optional(),
   rating: z.number().min(1).max(5),
   accuracy: z.enum(["accurate", "slight_delay", "heavy_delay"]),
   suitability: z.enum(["great", "average", "crowded"]),
@@ -23,6 +24,14 @@ export async function GET(
       return NextResponse.json({ error: "Meetup not found" }, { status: 404 });
     }
 
+    const user = await getSessionUser(request);
+    if (!isMeetupMember(meetup, user.userId)) {
+      return NextResponse.json(
+        { error: "Forbidden. Only members can view meetup feedback." },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json({ feedback: meetup.feedback || [] });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -35,6 +44,12 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
+    const meetup = getMeetupFromStore(id);
+    if (!meetup) {
+      return NextResponse.json({ error: "Meetup not found" }, { status: 404 });
+    }
+
+    const user = await getSessionUser(request);
     const body = await request.json().catch(() => null);
     if (!body) {
       return NextResponse.json({ error: "Missing JSON body" }, { status: 400 });
@@ -48,12 +63,15 @@ export async function POST(
       );
     }
 
-    const meetup = getMeetupFromStore(id);
-    if (!meetup) {
-      return NextResponse.json({ error: "Meetup not found" }, { status: 404 });
+    const effectiveMemberId = validation.data.memberId || user.userId;
+    if (!isMeetupMember(meetup, effectiveMemberId) && !isMeetupMember(meetup, user.userId)) {
+      return NextResponse.json(
+        { error: "Forbidden. Only members of this meetup can submit feedback." },
+        { status: 403 }
+      );
     }
 
-    const fb = recordMeetupFeedback(id, validation.data.memberId, {
+    const fb = recordMeetupFeedback(id, effectiveMemberId, {
       rating: validation.data.rating,
       accuracy: validation.data.accuracy,
       suitability: validation.data.suitability,

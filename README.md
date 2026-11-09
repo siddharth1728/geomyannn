@@ -76,12 +76,23 @@ GEOMYANNN/
 ## ⚡ Quick Start
 
 ### 1. Environment Configuration
-Create `.env.local` in the project root:
+Copy `.env.example` to `.env.local` and add your provider credentials:
+```bash
+cp .env.example .env.local
+```
+
+Required environment variables in `.env.local`:
 ```env
-NEXT_PUBLIC_MAPTILER_KEY=gDCzA1avLA0udEVVgHhl
-GRAPHHOPPER_API_KEY=6ebdeb32-4581-4b86-97f7-c187909e4a07
-NEXT_PUBLIC_SUPABASE_URL=https://ppytdnhvvbmhaaurydza.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_1PBI0qGXF2hKfxqmkQhJkg_l0B5YuLU
+# MapTiler (Map tiles & Geocoding)
+NEXT_PUBLIC_MAPTILER_KEY=your_maptiler_key_here
+
+# GraphHopper (Routing & Travel Time Matrix)
+GRAPHHOPPER_API_KEY=your_graphhopper_key_here
+
+# Supabase (PostgreSQL Database & Auth)
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```
 
 ### 2. Run the Web Application
@@ -91,20 +102,10 @@ npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 3. Run the Mobile Application (iOS & Android)
+### 3. Run Test Suite & Typecheck
 ```bash
-cd apps/mobile
-npm install
-npx expo start
-```
-- Press `a` for Android Emulator.
-- Press `i` for iOS Simulator.
-- Scan QR code with Expo Go on a physical device.
-
-### 4. Run Test Suite & Typecheck
-```bash
-npm test            # Runs Vitest unit tests (11/11 passing)
-npm run typecheck   # Typecheck entire codebase (0 errors)
+npm test            # Runs Vitest unit tests
+npm run typecheck   # Typecheck entire codebase
 npm run build       # Production build verification
 ```
 

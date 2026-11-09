@@ -24,9 +24,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "Road No. 1, Banjara Hills, Hyderabad",
       latitude: 17.4192,
       longitude: 78.4427,
-      rating: 4.6,
-      priceLevel: "moderate",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
     {
       venueId: "hyd-rest-2",
@@ -35,9 +33,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "Road No. 4, Green Valley, Banjara Hills, Hyderabad",
       latitude: 17.4210,
       longitude: 78.4424,
-      rating: 4.5,
-      priceLevel: "moderate",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
     {
       venueId: "hyd-rest-3",
@@ -46,9 +42,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "Masab Tank, Central Hyderabad",
       latitude: 17.3980,
       longitude: 78.4480,
-      rating: 4.8,
-      priceLevel: "premium",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
     {
       venueId: "hyd-rest-4",
@@ -57,9 +51,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "RTC X Roads, Chikkadpally, Hyderabad",
       latitude: 17.4018,
       longitude: 78.4988,
-      rating: 4.5,
-      priceLevel: "budget",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
     {
       venueId: "hyd-rest-5",
@@ -68,9 +60,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "SD Road, Secunderabad / Begumpet, Hyderabad",
       latitude: 17.4435,
       longitude: 78.4842,
-      rating: 4.4,
-      priceLevel: "moderate",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
     {
       venueId: "hyd-rest-6",
@@ -79,9 +69,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "Road No. 12, Banjara Hills, Hyderabad",
       latitude: 17.4135,
       longitude: 78.4450,
-      rating: 4.7,
-      priceLevel: "premium",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
   ],
   cafe: [
@@ -92,9 +80,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "Road No. 14, Banjara Hills, Hyderabad",
       latitude: 17.4198,
       longitude: 78.4350,
-      rating: 4.7,
-      priceLevel: "moderate",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
     {
       venueId: "hyd-cafe-2",
@@ -103,9 +89,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "Road No. 36, Jubilee Hills, Hyderabad",
       latitude: 17.4320,
       longitude: 78.4070,
-      rating: 4.6,
-      priceLevel: "moderate",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
     {
       venueId: "hyd-cafe-3",
@@ -114,9 +98,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "Banjara Hills Road No. 12, Hyderabad",
       latitude: 17.4140,
       longitude: 78.4490,
-      rating: 4.8,
-      priceLevel: "budget",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
   ],
   cinema: [
@@ -127,9 +109,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "NTR Gardens, Necklace Road, Hyderabad",
       latitude: 17.4128,
       longitude: 78.4682,
-      rating: 4.6,
-      priceLevel: "moderate",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
     {
       venueId: "hyd-cine-2",
@@ -138,9 +118,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "Next Galleria Mall, Punjagutta, Hyderabad",
       latitude: 17.4267,
       longitude: 78.4518,
-      rating: 4.4,
-      priceLevel: "moderate",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
   ],
   park: [
@@ -151,9 +129,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "Jubilee Hills Checkpost, Hyderabad",
       latitude: 17.4243,
       longitude: 78.4168,
-      rating: 4.7,
-      priceLevel: "budget",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
     {
       venueId: "hyd-park-2",
@@ -162,9 +138,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "Tank Bund Road, Hyderabad",
       latitude: 17.4150,
       longitude: 78.4720,
-      rating: 4.5,
-      priceLevel: "budget",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
   ],
   shopping: [
@@ -175,9 +149,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "Road No. 1, Banjara Hills, Hyderabad",
       latitude: 17.4190,
       longitude: 78.4485,
-      rating: 4.5,
-      priceLevel: "premium",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
   ],
   entertainment: [
@@ -188,9 +160,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "Inorbit Mall, Hitec City / Madhapur",
       latitude: 17.4338,
       longitude: 78.3871,
-      rating: 4.4,
-      priceLevel: "moderate",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
   ],
   sports: [
@@ -201,9 +171,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "Old Mumbai Highway, Gachibowli, Hyderabad",
       latitude: 17.4470,
       longitude: 78.3490,
-      rating: 4.6,
-      priceLevel: "budget",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
   ],
   activity: [
@@ -214,9 +182,7 @@ const HYDERABAD_VERIFIED_VENUES: Record<MeetupCategory, DiscoveredVenue[]> = {
       address: "Road No. 36, Jubilee Hills, Hyderabad",
       latitude: 17.4335,
       longitude: 78.4060,
-      rating: 4.7,
-      priceLevel: "moderate",
-      attribution: "OpenStreetMap Contributors",
+      attribution: "Verified Landmark Location",
     },
   ],
   other: [],
@@ -227,7 +193,7 @@ export async function searchCandidateVenues(
   center: Coordinates,
   limit: number = 6
 ): Promise<{ venues: DiscoveredVenue[]; source: "osm" | "verified" }> {
-  // Query live OpenStreetMap Nominatim for real-time venues around the group's midpoint
+  // Query live OpenStreetMap Nominatim around the group's actual centroid coordinates
   try {
     const categoryQueryMap: Record<MeetupCategory, string> = {
       restaurant: "restaurant",
@@ -242,14 +208,23 @@ export async function searchCandidateVenues(
     };
 
     const q = categoryQueryMap[category] || "restaurant";
-    const encoded = encodeURIComponent(`${q} in Hyderabad`);
-    const url = `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=${limit}&addressdetails=1`;
+    const encoded = encodeURIComponent(q);
+
+    // Dynamic bounding box ~8km around group centroid (0.08 degrees)
+    const delta = 0.08;
+    const minLon = (center.longitude - delta).toFixed(4);
+    const maxLon = (center.longitude + delta).toFixed(4);
+    const minLat = (center.latitude - delta).toFixed(4);
+    const maxLat = (center.latitude + delta).toFixed(4);
+
+    const url = `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=${limit}&viewbox=${minLon},${maxLat},${maxLon},${minLat}&bounded=1&addressdetails=1`;
 
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "GEORYNTH-Group-Meetup/2.0",
+        "User-Agent": "GEORYNTH-Group-Meetup/2.0 (https://georynth.com; support@georynth.com)",
         Accept: "application/json",
       },
+      next: { revalidate: 3600 }, // Cache POI lookups for 1 hour to respect OSM rate limits
     });
 
     if (res.ok) {
@@ -262,21 +237,26 @@ export async function searchCandidateVenues(
           address: item.display_name,
           latitude: parseFloat(item.lat),
           longitude: parseFloat(item.lon),
-          rating: 4.3 + (idx % 5) * 0.1,
-          priceLevel: idx % 2 === 0 ? "moderate" : "budget",
-          attribution: "OpenStreetMap Contributors",
+          // HONEST DATA POLICY: OpenStreetMap nodes do not provide customer star ratings
+          // or proprietary price tiers. Do NOT fabricate them based on array index.
+          rating: undefined,
+          priceLevel: undefined,
+          attribution: "OpenStreetMap Contributors (Geographical POI Data)",
         }));
 
-        // Return verified candidates augmented with live queried venues
-        const combined = [...(HYDERABAD_VERIFIED_VENUES[category] || []), ...liveVenues].slice(0, limit);
-        return { venues: combined, source: "osm" };
+        return { venues: liveVenues.slice(0, limit), source: "osm" };
       }
     }
   } catch (err) {
     console.warn("Live OSM venue query failed, utilizing verified venue dataset:", err);
   }
 
-  // Guaranteed fallback to verified real venues
-  const fallbackList = HYDERABAD_VERIFIED_VENUES[category] || HYDERABAD_VERIFIED_VENUES.restaurant;
+  // Guaranteed fallback to verified real venues if offline or OSM is unreachable
+  const fallbackList = (HYDERABAD_VERIFIED_VENUES[category] || HYDERABAD_VERIFIED_VENUES.restaurant).map((v) => ({
+    ...v,
+    // Ensure verified venues do not claim fabricated ratings
+    rating: undefined,
+    attribution: "Verified Landmark Location",
+  }));
   return { venues: fallbackList.slice(0, limit), source: "verified" };
 }

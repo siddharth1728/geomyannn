@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GeocodeQuerySchema } from "@/lib/validation/schemas";
 import { geocodeSearch } from "@/lib/providers/maptiler";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  // Rate limiting to protect MapTiler geocoding quota: 60 req / min per IP
+  const rateLimit = checkRateLimit(request, {
+    limit: 60,
+    windowMs: 60000,
+    prefix: "api_geocode",
+  });
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: `Too many search queries. Please retry in ${rateLimit.resetSeconds} seconds.` },
+      { status: 429 }
+    );
+  }
   try {
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q") ?? "";

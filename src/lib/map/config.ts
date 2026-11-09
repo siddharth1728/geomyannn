@@ -4,7 +4,7 @@ export const DEFAULT_ZOOM = 11.5;
 export type MapStyleType = "streets" | "hybrid" | "dark";
 
 export function getMapStyleUrl(selectedStyle: MapStyleType = "streets"): { url: string; isFallback: boolean } {
-  const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY || "gDCzA1avLA0udEVVgHhl";
+  const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY;
 
   const styleIdMap: Record<MapStyleType, string> = {
     streets: "streets-v2", // Rich Google Maps style with all places, POIs, roads, transit
