@@ -30,6 +30,7 @@ import {
   ParticipantLocation 
 } from "@/types/meetup";
 import { RouteResult } from "@/types/geo";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { rankVenues } from "@/lib/providers/matrix";
 import { VenueCard } from "./VenueCard";
 
@@ -65,6 +66,7 @@ export function MeetupWorkspace({
   onSaveVenue,
   savedVenueIds = [],
 }: MeetupWorkspaceProps) {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("places");
   const [rankingMode, setRankingMode] = useState<RankingMode>("fairest");
   const [calculating, setCalculating] = useState(false);
@@ -77,7 +79,6 @@ export function MeetupWorkspace({
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState("");
   const [newMemberLabel, setNewMemberLabel] = useState("");
-  const [newMemberCoords, setNewMemberCoords] = useState<{ lat: number; lon: number }>({ lat: 17.3916, lon: 78.4398 });
 
   // Post-Meetup Feedback State
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -87,8 +88,8 @@ export function MeetupWorkspace({
   const [feedbackNote, setFeedbackNote] = useState<string>("");
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<boolean>(false);
 
-  const currentMemberId = meetup.members[0]?.userId || "user-me";
-  const isCreator = true; // Creator permissions active in workspace session
+  const currentMemberId = user?.id || meetup.members[0]?.userId || "attendee-1";
+  const isCreator = Boolean(!user || user.id === meetup.creatorId || meetup.members[0]?.userId === currentMemberId);
 
   useEffect(() => {
     if (selectedVenueId) {
@@ -116,6 +117,23 @@ export function MeetupWorkspace({
     if (!newMemberName.trim() || !newMemberLabel.trim()) return;
 
     try {
+      let lat = 17.4156;
+      let lon = 78.4357;
+
+      // Dynamically geocode the neighborhood or landmark entered
+      try {
+        const geoRes = await fetch(`/api/geocode?q=${encodeURIComponent(newMemberLabel.trim())}`);
+        if (geoRes.ok) {
+          const geoData = await geoRes.json();
+          if (geoData.results && geoData.results.length > 0) {
+            lat = geoData.results[0].coordinates.latitude;
+            lon = geoData.results[0].coordinates.longitude;
+          }
+        }
+      } catch (geoErr) {
+        console.warn("Geocoding participant location error:", geoErr);
+      }
+
       const memberId = `mem-${Date.now()}`;
       await fetch(`/api/meetups/${meetup.id}`, {
         method: "POST",
@@ -130,8 +148,8 @@ export function MeetupWorkspace({
           memberId,
           memberName: newMemberName.trim(),
           label: newMemberLabel.trim(),
-          latitude: newMemberCoords.lat,
-          longitude: newMemberCoords.lon,
+          latitude: lat,
+          longitude: lon,
         }),
       });
 

@@ -65,26 +65,7 @@ export default function GeorynthApp() {
   // Geographical entities
   const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null);
   const [activeRoute, setActiveRoute] = useState<RouteResult | null>(null);
-  const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([
-    {
-      id: "sav-hyd-1",
-      userId: "guest-user",
-      label: "Roastery Coffee House",
-      placeName: "Road No 14, Banjara Hills, Hyderabad",
-      latitude: 17.4184,
-      longitude: 78.4382,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: "sav-hyd-2",
-      userId: "guest-user",
-      label: "HITEC City Cyber Towers",
-      placeName: "HITEC City, Madhapur, Hyderabad",
-      latitude: 17.4474,
-      longitude: 78.3762,
-      createdAt: new Date().toISOString(),
-    },
-  ]);
+  const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
 
   // Provider status
   const [providerStatus, setProviderStatus] = useState<ProviderStatus>({
@@ -155,6 +136,21 @@ export default function GeorynthApp() {
       }
     }
     init();
+  }, []);
+
+  // Hydrate saved places from localStorage on client mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("georynth_saved_places");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSavedPlaces(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load saved places from localStorage", e);
+    }
   }, []);
 
   // Sync saved places updates to localStorage

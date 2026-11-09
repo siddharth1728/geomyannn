@@ -1,9 +1,11 @@
 "use client";
 
 import React from "react";
-import { Compass, Users, MapPin, Bookmark, Settings, Plus } from "lucide-react";
+import Link from "next/link";
+import { Compass, Users, MapPin, Bookmark, Settings, Plus, LogIn, User } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { ActiveMode } from "@/types/geo";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 interface AppHeaderProps {
   activeMode: ActiveMode;
@@ -20,6 +22,9 @@ export function AppHeader({
   onOpenSettings,
   meetupCount = 0,
 }: AppHeaderProps) {
+  const { user } = useAuth();
+  const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || null;
+
   const navItems: { id: ActiveMode; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: "explore", label: "Explore", icon: MapPin },
     { id: "my_meetups", label: "Meetups", icon: Users },
@@ -90,10 +95,35 @@ export function AppHeader({
           <span className="hidden sm:inline">Plan Meetup</span>
         </button>
 
-        {/* User Avatar / Profile Settings Trigger */}
+        {user ? (
+          /* Logged In User Avatar / Profile Settings Trigger */
+          <button
+            onClick={onOpenSettings}
+            title={`Account: ${userName || user.email}`}
+            className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-xl bg-surface-secondary hover:bg-surface border border-border text-text-primary transition-colors shadow-subtle"
+          >
+            <div className="w-6 h-6 rounded-lg bg-primary text-white text-xs font-bold flex items-center justify-center">
+              {(userName || "U")[0].toUpperCase()}
+            </div>
+            <span className="hidden sm:inline text-xs font-bold max-w-[100px] truncate">
+              {userName}
+            </span>
+          </button>
+        ) : (
+          /* Unauthenticated State: Sign In Link */
+          <Link
+            href="/login"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-secondary hover:bg-surface border border-border text-xs font-bold text-text-primary hover:text-primary transition-colors shadow-subtle"
+          >
+            <LogIn className="w-3.5 h-3.5 text-primary" />
+            <span>Sign In</span>
+          </Link>
+        )}
+
+        {/* Settings Button */}
         <button
           onClick={onOpenSettings}
-          title="Account & Settings"
+          title="App Settings"
           className="w-8 h-8 rounded-xl bg-surface-secondary hover:bg-surface border border-border text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors shadow-subtle"
         >
           <Settings className="w-4 h-4" />

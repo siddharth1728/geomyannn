@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   KeyRound, 
   X, 
@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Meetup } from "@/types/meetup";
 import { Coordinates } from "@/types/geo";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 interface JoinMeetupModalProps {
   isOpen: boolean;
@@ -38,12 +39,19 @@ export function JoinMeetupModal({
   userLocation,
   onRequestUserLocation,
 }: JoinMeetupModalProps) {
+  const { user } = useAuth();
   const [inviteCode, setInviteCode] = useState("");
-  const [userName, setUserName] = useState("");
-  const [selectedPreset, setSelectedPreset] = useState("Secunderabad");
-  const [coords, setCoords] = useState<Coordinates>({ latitude: 17.4399, longitude: 78.4983 });
+  const [userName, setUserName] = useState(user?.user_metadata?.full_name || "");
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  const [coords, setCoords] = useState<Coordinates | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.user_metadata?.full_name && !userName) {
+      setUserName(user.user_metadata.full_name);
+    }
+  }, [user, userName]);
 
   if (!isOpen) return null;
 
@@ -51,6 +59,11 @@ export function JoinMeetupModal({
     e.preventDefault();
     if (!inviteCode.trim() || !userName.trim()) {
       setError("Please provide an invite code and your name.");
+      return;
+    }
+
+    if (!coords || !selectedPreset) {
+      setError("Please pick or detect your starting location so we can balance travel times.");
       return;
     }
 
@@ -66,7 +79,7 @@ export function JoinMeetupModal({
       }
 
       const meetup: Meetup = fetchData.meetup;
-      const memberId = `mem-${Date.now()}`;
+      const memberId = user?.id || `mem-${Date.now()}`;
 
       await fetch(`/api/meetups/${meetup.id}`, {
         method: "POST",
@@ -123,7 +136,7 @@ export function JoinMeetupModal({
                 Join a Meetup
               </h2>
               <p className="text-xs text-text-muted">
-                Enter your invite code and drop your starting pin
+                Enter your invite code and select your starting point
               </p>
             </div>
           </div>
@@ -136,7 +149,7 @@ export function JoinMeetupModal({
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-danger/10 border border-danger/20 text-danger text-xs">
+          <div className="p-3 rounded-xl bg-danger/10 border border-danger/20 text-danger text-xs font-medium">
             {error}
           </div>
         )}
@@ -172,15 +185,26 @@ export function JoinMeetupModal({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-              Your Starting Point
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                Your Starting Point
+              </label>
+              {selectedPreset && (
+                <span className="text-[11px] font-semibold text-primary">
+                  Selected: {selectedPreset}
+                </span>
+              )}
+            </div>
 
             {/* GPS Button */}
             <button
               type="button"
               onClick={handleUseGPS}
-              className="w-full py-2.5 px-3 rounded-xl bg-surface-secondary hover:bg-surface border border-border text-text-primary text-xs font-semibold flex items-center justify-center gap-2 transition-colors mb-2.5"
+              className={`w-full py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-colors mb-2.5 ${
+                selectedPreset === "Current GPS Location"
+                  ? "border-primary bg-primary-soft text-primary"
+                  : "bg-surface-secondary hover:bg-surface border-border text-text-primary"
+              }`}
             >
               <LocateFixed className="w-4 h-4 text-primary" />
               <span>Use Current Device Location (GPS)</span>
@@ -203,7 +227,7 @@ export function JoinMeetupModal({
                     }}
                     className={`py-2 px-3 rounded-xl border text-xs font-medium text-left truncate transition-all ${
                       isSelected
-                        ? "border-primary bg-primary-soft text-primary font-bold shadow-subtle"
+                        ? "border-primary bg-primary-soft text-primary font-bold shadow-subtle ring-1 ring-primary"
                         : "border-border bg-surface-secondary hover:bg-surface text-text-secondary hover:text-text-primary"
                     }`}
                   >

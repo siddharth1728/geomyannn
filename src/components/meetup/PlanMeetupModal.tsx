@@ -60,24 +60,24 @@ export function PlanMeetupModal({
   // 3-Step Wizard state: 1 = What, 2 = When, 3 = Preferences
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
-  // Step 1: What are we doing?
-  const [title, setTitle] = useState("Weekend Group Gathering");
-  const [creatorName, setCreatorName] = useState("Siddharth");
-  const [category, setCategory] = useState<MeetupCategory>("restaurant");
+  // Step 1: What are we doing? (Zero-Default Policy: All fields start empty/unselected)
+  const [title, setTitle] = useState("");
+  const [creatorName, setCreatorName] = useState("");
+  const [category, setCategory] = useState<MeetupCategory | null>(null);
 
-  // Step 2: When?
-  const [dateChoice, setDateChoice] = useState<"today" | "tomorrow" | "custom">("tomorrow");
-  const [customDate, setCustomDate] = useState("2026-11-08");
-  const [plannedTime, setPlannedTime] = useState("19:30");
-  const [transportMode, setTransportMode] = useState<"car" | "bike" | "foot">("car");
+  // Step 2: When? (Zero-Default: unselected)
+  const [dateChoice, setDateChoice] = useState<"today" | "tomorrow" | "custom" | null>(null);
+  const [customDate, setCustomDate] = useState("");
+  const [plannedTime, setPlannedTime] = useState("");
+  const [transportMode, setTransportMode] = useState<"car" | "bike" | "foot" | null>(null);
 
-  // Step 3: Preferences
-  const [budget, setBudget] = useState<MeetupBudget>("moderate");
-  const [maxTravelTime, setMaxTravelTime] = useState<number>(35);
+  // Step 3: Preferences (Zero-Default: unselected/optional)
+  const [budget, setBudget] = useState<MeetupBudget | null>(null);
+  const [maxTravelTime, setMaxTravelTime] = useState<number | null>(null);
   const [strictMaxTravel, setStrictMaxTravel] = useState(false);
-  const [cuisine, setCuisine] = useState<CuisinePreference>("any");
-  const [dietary, setDietary] = useState<DietaryRequirement>("any");
-  const [atmosphere, setAtmosphere] = useState<AtmospherePreference>("casual");
+  const [cuisine, setCuisine] = useState<CuisinePreference | null>(null);
+  const [dietary, setDietary] = useState<DietaryRequirement | null>(null);
+  const [atmosphere, setAtmosphere] = useState<AtmospherePreference | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +90,16 @@ export function PlanMeetupModal({
     setError(null);
 
     try {
+      if (!title.trim()) {
+        throw new Error("Please enter a title for your meetup.");
+      }
+      if (!creatorName.trim()) {
+        throw new Error("Please enter your name as the host.");
+      }
+      if (!category) {
+        throw new Error("Please choose an activity category.");
+      }
+
       let finalDate = customDate;
       const today = new Date();
       if (dateChoice === "today") {
@@ -99,7 +109,9 @@ export function PlanMeetupModal({
         finalDate = tomorrow.toISOString().split("T")[0];
       }
 
-      const plannedAt = new Date(`${finalDate}T${plannedTime}:00Z`).toISOString();
+      const timeStr = plannedTime.trim() || "19:00";
+      const dateStr = finalDate || today.toISOString().split("T")[0];
+      const plannedAt = new Date(`${dateStr}T${timeStr}:00Z`).toISOString();
 
       const res = await fetch("/api/meetups", {
         method: "POST",
@@ -109,15 +121,15 @@ export function PlanMeetupModal({
           creatorName: creatorName.trim(),
           category,
           plannedAt,
-          budget,
-          transportMode,
+          budget: budget || "any",
+          transportMode: transportMode || "car",
           preferences: {
             category,
-            budget,
-            cuisine,
-            dietary,
-            atmosphere,
-            maxTravelTimeMinutes: maxTravelTime,
+            budget: budget || undefined,
+            cuisine: cuisine || undefined,
+            dietary: dietary || undefined,
+            atmosphere: atmosphere || undefined,
+            maxTravelTimeMinutes: maxTravelTime || undefined,
             strictMaxTravel,
           },
         }),
@@ -210,7 +222,7 @@ export function PlanMeetupModal({
                   required
                   value={creatorName}
                   onChange={(e) => setCreatorName(e.target.value)}
-                  placeholder="e.g. Siddharth"
+                  placeholder="e.g. Diya Sharma"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-surface-secondary border border-border text-text-primary text-sm focus:outline-none focus:border-primary transition-colors"
                 />
               </div>
@@ -416,7 +428,7 @@ export function PlanMeetupModal({
                     Max Travel Time Cap
                   </label>
                   <span className="text-xs font-bold text-primary font-mono tabular-nums">
-                    {maxTravelTime} mins
+                    {maxTravelTime ? `${maxTravelTime} mins` : "No limit set"}
                   </span>
                 </div>
                 <input
@@ -424,7 +436,7 @@ export function PlanMeetupModal({
                   min={15}
                   max={60}
                   step={5}
-                  value={maxTravelTime}
+                  value={maxTravelTime ?? 35}
                   onChange={(e) => setMaxTravelTime(Number(e.target.value))}
                   className="w-full accent-primary h-2 bg-surface-secondary rounded-lg cursor-pointer"
                 />
@@ -483,7 +495,16 @@ export function PlanMeetupModal({
             {step < 3 ? (
               <button
                 type="button"
-                onClick={() => setStep((s) => (s + 1) as any)}
+                onClick={() => {
+                  if (step === 1) {
+                    if (!title.trim() || !creatorName.trim() || !category) {
+                      setError("Please provide a meetup title, your name, and choose an activity category.");
+                      return;
+                    }
+                  }
+                  setError(null);
+                  setStep((s) => (s + 1) as any);
+                }}
                 className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-subtle transition-all active:scale-95"
               >
                 <span>Continue</span>

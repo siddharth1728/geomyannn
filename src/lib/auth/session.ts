@@ -33,10 +33,13 @@ export async function getSessionUser(request: NextRequest): Promise<Authenticate
     };
   }
 
-  // 2. Check for Verified Supabase Auth Session
+  // 2. Check for Verified Supabase Auth Session (Bearer header or secure cookie)
   const supabase = getSupabaseServerClient();
-  if (supabase && authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.substring(7).trim();
+  const bearerToken = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7).trim() : null;
+  const cookieToken = request.cookies.get("georynth_auth_token")?.value;
+  const token = bearerToken || cookieToken;
+
+  if (supabase && token) {
     try {
       const { data: { user }, error } = await supabase.auth.getUser(token);
       if (user && !error) {
@@ -58,8 +61,8 @@ export async function getSessionUser(request: NextRequest): Promise<Authenticate
   const headerUserId = request.headers.get("x-user-id");
   const headerUserName = request.headers.get("x-user-name");
 
-  const effectiveId = cookieSession || headerUserId || "user-guest";
-  const effectiveName = headerUserName ? decodeURIComponent(headerUserName).slice(0, 50) : "Guest Member";
+  const effectiveId = cookieSession || headerUserId || "";
+  const effectiveName = headerUserName ? decodeURIComponent(headerUserName).slice(0, 50) : "";
 
   return {
     userId: effectiveId,
