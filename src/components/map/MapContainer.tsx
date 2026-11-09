@@ -28,6 +28,7 @@ interface MapContainerProps {
   onMapClick?: (coords: Coordinates) => void;
   onSelectReport?: (report: CommunityReport) => void;
   onSelectVenue?: (venue: CandidateVenue) => void;
+  selectedVenueId?: string | null;
   selectedPlace?: PlaceResult | null;
   activeRoute?: RouteResult | null;
   multiRoutes?: RouteResult[];
@@ -45,6 +46,7 @@ export function MapContainer({
   onMapClick,
   onSelectReport,
   onSelectVenue,
+  selectedVenueId,
   selectedPlace,
   activeRoute,
   multiRoutes = [],
@@ -156,14 +158,28 @@ export function MapContainer({
         type: "circle",
         source: MAP_SOURCES.VENUES,
         paint: {
-          "circle-radius": 11,
+          "circle-radius": [
+            "case",
+            ["boolean", ["get", "isSelected"], false],
+            14,
+            ["==", ["get", "rank"], 1],
+            12,
+            10,
+          ],
           "circle-color": [
             "case",
+            ["boolean", ["get", "isSelected"], false],
+            "#168B6D",
             ["==", ["get", "rank"], 1],
-            "#D97706",
-            "#7C3AED",
+            "#059669",
+            "#2563EB",
           ],
-          "circle-stroke-width": 3,
+          "circle-stroke-width": [
+            "case",
+            ["boolean", ["get", "isSelected"], false],
+            4,
+            3,
+          ],
           "circle-stroke-color": "#ffffff",
         },
       });
@@ -491,10 +507,11 @@ export function MapContainer({
           category: v.category,
           avgDurationSec: v.avgDurationSec,
           rank: i + 1,
+          isSelected: Boolean(selectedVenueId && (v.venueId === selectedVenueId || v.id === selectedVenueId)),
         },
       })),
     });
-  }, [candidateVenues, styleLoaded]);
+  }, [candidateVenues, styleLoaded, selectedVenueId]);
 
   // Synchronize Selected Place Marker & FlyTo
   useEffect(() => {

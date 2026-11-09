@@ -51,6 +51,8 @@ export default function GeorynthApp() {
   const [allMeetups, setAllMeetups] = useState<Meetup[]>([]);
   const [activeMeetup, setActiveMeetup] = useState<Meetup | null>(null);
   const [multiRoutes, setMultiRoutes] = useState<RouteResult[]>([]);
+  const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
+  const [mobileSheetState, setMobileSheetState] = useState<"peek" | "half" | "full">("half");
 
   // Map viewport
   const [viewport, setViewport] = useState({
@@ -252,14 +254,45 @@ export default function GeorynthApp() {
 
       {/* 2. Integrated Two-Column Workspace (Google Maps-Grade Shell) */}
       <main className="relative flex-1 w-full h-[calc(100vh-56px)] flex overflow-hidden">
-        {/* Left Column: Context / Results / Meetup Dock (380-420px, Collapsible) */}
+        {/* Left Column: Context / Results / Meetup Dock (380-420px, Collapsible Desktop / Responsive Mobile Sheet) */}
         <aside
-          className={`h-full border-r border-border bg-surface flex flex-col z-20 shrink-0 transition-all duration-300 relative ${
+          className={`transition-all duration-300 z-20 bg-surface flex flex-col ${
             isDockCollapsed
-              ? "w-0 overflow-hidden border-none"
-              : "w-full md:w-[380px] lg:w-[420px]"
+              ? "md:w-0 overflow-hidden md:border-none hidden md:flex"
+              : "md:h-full md:border-r md:border-border md:w-[380px] lg:w-[420px] md:relative"
+          } ${
+            activeMeetup
+              ? `fixed md:static inset-x-0 bottom-0 md:bottom-auto rounded-t-3xl md:rounded-none border-t md:border-t-0 border-border shadow-float md:shadow-none transition-all duration-300 ${
+                  mobileSheetState === "peek"
+                    ? "h-20 md:h-full"
+                    : mobileSheetState === "half"
+                    ? "h-[50vh] md:h-full"
+                    : "h-[85vh] md:h-full"
+                }`
+              : "w-full md:w-[380px] lg:w-[420px] h-full"
           }`}
         >
+          {/* Mobile Sheet Handle (Only on mobile when active meetup is open) */}
+          {activeMeetup && (
+            <div
+              onClick={() =>
+                setMobileSheetState((prev) =>
+                  prev === "half" ? "full" : prev === "full" ? "peek" : "half"
+                )
+              }
+              className="md:hidden w-full py-2 flex flex-col items-center justify-center cursor-pointer bg-surface hover:bg-surface-secondary rounded-t-3xl border-b border-border/40 shrink-0 select-none"
+            >
+              <div className="w-10 h-1 bg-border rounded-full" />
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider mt-1">
+                {mobileSheetState === "peek"
+                  ? "Tap to view places"
+                  : mobileSheetState === "half"
+                  ? "Tap for full list"
+                  : "Tap to collapse"}
+              </span>
+            </div>
+          )}
+
           {/* Top Search Field Embedded in Dock */}
           <div className="p-3 border-b border-border bg-surface shrink-0 flex items-center gap-2">
             <div className="flex-1">
@@ -326,7 +359,9 @@ export default function GeorynthApp() {
               <MeetupWorkspace
                 meetup={activeMeetup}
                 onUpdateMeetup={(updated) => setActiveMeetup(updated)}
+                selectedVenueId={selectedVenueId}
                 onSelectVenueOnMap={(v) => {
+                  setSelectedVenueId(v.venueId);
                   if (mapInstanceRef.current) {
                     mapInstanceRef.current.flyTo({
                       center: [v.longitude, v.latitude],
@@ -336,8 +371,22 @@ export default function GeorynthApp() {
                   }
                 }}
                 onDisplayDirections={(routes) => setMultiRoutes(routes)}
+                onSaveVenue={(v) => {
+                  const sp: SavedPlace = {
+                    id: `saved-${Date.now()}`,
+                    userId: "guest",
+                    label: v.name,
+                    placeName: v.address,
+                    latitude: v.latitude,
+                    longitude: v.longitude,
+                    createdAt: new Date().toISOString(),
+                  };
+                  setSavedPlaces((prev) => [sp, ...prev]);
+                }}
+                savedVenueIds={savedPlaces.map((sp) => sp.label)}
                 onClose={() => {
                   setActiveMeetup(null);
+                  setSelectedVenueId(null);
                   setActiveMode("plan");
                 }}
               />
@@ -423,7 +472,9 @@ export default function GeorynthApp() {
             userLocation={userCoords}
             participantLocations={activeMeetup?.locations || []}
             candidateVenues={activeMeetup?.venues || []}
+            selectedVenueId={selectedVenueId}
             onSelectVenue={(v) => {
+              setSelectedVenueId(v.venueId);
               if (mapInstanceRef.current) {
                 mapInstanceRef.current.flyTo({
                   center: [v.longitude, v.latitude],
